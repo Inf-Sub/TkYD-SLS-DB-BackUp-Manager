@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 
 import os
@@ -17,7 +17,6 @@ import logging
 import asyncio
 import aiofiles
 from datetime import datetime
-
 from colorlog import ColoredFormatter
 from dotenv import load_dotenv
 
@@ -27,6 +26,8 @@ load_dotenv()
 
 class BackupManager:
     def __init__(self):
+        self.setup_logging()
+
         self.server_dir = self.get_env_variable('SERVER_DIR')
         self.server_start_file = self.get_env_variable('SERVER_START_FILE')
         self.server_stop_file = self.get_env_variable('SERVER_STOP_FILE')
@@ -37,14 +38,15 @@ class BackupManager:
         self.active_db_extensions = [ext.strip() for ext in os.getenv('ACTIVE_DB_EXTENSIONS', '.PRE').split(',')]
         self.archive_format = os.getenv('ARCHIVE_FORMAT', 'zip')
         self.path_separator = os.getenv('PATH_SEPARATOR', ' ')
-        self.setup_logging()
 
 
     @staticmethod
     def get_env_variable(var_name: str) -> str:
         value = os.getenv(var_name)
         if value is None:
+            logging.error(f"ERROR: Environment variable {var_name} is not set")
             raise ValueError(f"ERROR: Environment variable {var_name} is not set")
+        logging.info(f"Environment variable {var_name} is set to {value}")
         return value
 
 
