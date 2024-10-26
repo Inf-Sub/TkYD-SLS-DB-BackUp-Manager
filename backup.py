@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 
 import os
@@ -20,7 +20,8 @@ import aiosqlite
 from datetime import datetime
 from colorlog import ColoredFormatter
 from dotenv import load_dotenv
-from typing import List, Optional, Awaitable
+from typing import Optional, Awaitable
+import tracemalloc
 
 
 class BackupManager:
@@ -31,7 +32,6 @@ class BackupManager:
         которые используются для конфигурации путей и форматов резервного копирования.
         """
         load_dotenv()
-        self.setup_logging()
 
         # Инициализация переменных окружения для различных директорий и файлов
         self.server_dir = self.get_env_variable('SERVER_DIR')
@@ -53,6 +53,10 @@ class BackupManager:
         self.log_format = os.getenv('LOG_FORMAT', '%(asctime)s - %(levelname)6s - %(message)s')
 
         self.sqlite_db_path = os.path.join(self.databases_dir, self.sqlite_db_file)
+
+
+    async def initialize(self):
+        await self.setup_logging()
 
 
     async def setup_logging(self) -> None:
@@ -266,6 +270,7 @@ class BackupManager:
 
                 # Проверяем, имеет ли файл нужное расширение для базы данных
                 if file.endswith(self.db_extension):
+                    logging.info(f'File: {file} -  file.endswith: {file.endswith(self.db_extension)}.')
                     db_path = os.path.join(root, file)
 
                     # Проверяем, активен ли файл базы данных (например, открыт другой программой)
@@ -340,10 +345,15 @@ class BackupManager:
 
 
 if __name__ == "__main__":
+    tracemalloc.start()
+
     try:
         backup_manager = BackupManager()
+        asyncio.run(backup_manager.initialize())
         asyncio.run(backup_manager.execute())
     except KeyboardInterrupt:
         print('Execution was interrupted by the user.')
     except ValueError as err:
         print(err)
+
+    tracemalloc.stop()
