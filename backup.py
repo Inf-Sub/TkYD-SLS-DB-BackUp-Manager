@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.0'
+__version__ = '1.0.3'
 
 
 import os
@@ -27,16 +27,25 @@ load_dotenv()
 
 class BackupManager:
     def __init__(self):
-        self.server_dir = os.getenv('SERVER_DIR')
-        self.server_start_file = os.getenv('SERVER_START_FILE')
-        self.server_stop_file = os.getenv('SERVER_STOP_FILE')
-        self.databases_dir = os.getenv('DATABASES_DIR')
-        self.backup_dir = os.getenv('BACKUP_DIR')
+        self.server_dir = self.get_env_variable('SERVER_DIR')
+        self.server_start_file = self.get_env_variable('SERVER_START_FILE')
+        self.server_stop_file = self.get_env_variable('SERVER_STOP_FILE')
+        self.databases_dir = self.get_env_variable('DATABASES_DIR')
+        self.backup_dir = self.get_env_variable('BACKUP_DIR')
+
         self.db_extension = os.getenv('DB_EXTENSION', '.DBX')
         self.active_db_extensions = [ext.strip() for ext in os.getenv('ACTIVE_DB_EXTENSIONS', '.PRE').split(',')]
         self.archive_format = os.getenv('ARCHIVE_FORMAT', 'zip')
         self.path_separator = os.getenv('PATH_SEPARATOR', ' ')
         self.setup_logging()
+
+
+    @staticmethod
+    def get_env_variable(var_name: str) -> str:
+        value = os.getenv(var_name)
+        if value is None:
+            raise ValueError(f"Environment variable {var_name} is not set")
+        return value
 
 
     @staticmethod
@@ -78,16 +87,16 @@ class BackupManager:
 
 
     @staticmethod
-    async def has_sufficient_space(backup_path, db_path):
+    async def has_sufficient_space(backup_path: str, db_path: str) -> bool:
         return shutil.disk_usage(backup_path).free > os.path.getsize(db_path)
 
 
     @staticmethod
-    async def delete_oldest_backup(db_path):
+    async def delete_oldest_backup(db_path) -> None:
         logging.info(f"Deleting oldest backup for {db_path}.")
 
 
-    async def stop_server(self):
+    async def stop_server(self) -> None:
         try:
             shutil.copy(self.server_stop_file, self.server_dir)
             logging.info("Server stop command issued.")
@@ -95,7 +104,7 @@ class BackupManager:
             logging.error(f"Failed to issue server stop command: {e}")
 
 
-    async def start_server(self):
+    async def start_server(self) -> None:
         try:
             os.startfile(self.server_start_file)
             logging.info("Server started.")
@@ -103,14 +112,14 @@ class BackupManager:
             logging.error(f"Failed to start server: {e}")
 
 
-    async def check_active_files(self, db_path):
+    async def check_active_files(self, db_path: str) -> bool:
         for ext in self.active_db_extensions:
             if os.path.exists(db_path + ext):
                 return True
         return False
 
 
-    async def perform_backup(self):
+    async def perform_backup(self) -> None:
         for root, _, files in os.walk(self.databases_dir):
             for file in files:
                 if file.endswith(self.db_extension):
@@ -159,5 +168,10 @@ class BackupManager:
 
 
 if __name__ == "__main__":
-    backup_manager = BackupManager()
-    asyncio.run(backup_manager.execute())
+    try:
+        backup_manager = BackupManager()
+        asyncio.run(backup_manager.execute())
+    except KeyboardInterrupt:
+        print("Execution was interrupted by the user.")
+    except ValueError as err:
+        print(err)
