@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 
 import os
@@ -95,8 +95,10 @@ class BackupManager:
         Returns:
             Awaitable[logging.FileHandler]: Объект обработчика файла логирования.
         """
-        # Формируем полный путь к файлу на основе заданной папки и шаблона имени файла
-        filename = os.path.join(self.log_folder, datetime.now().strftime(self.log_file_template))
+        # Объединяем путь к папке и шаблон файла
+        full_path_template = os.path.join(self.log_folder, self.log_file_template)
+        # Формируем полный путь к файлу на основе текущей даты и времени
+        filename = datetime.now().strftime(full_path_template)
         print(filename)
         # Создаем необходимые каталоги, если их нет
         os.makedirs(os.path.dirname(filename), exist_ok=True)
