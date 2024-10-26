@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 
 import os
@@ -44,7 +44,7 @@ class BackupManager:
     def get_env_variable(var_name: str) -> str:
         value = os.getenv(var_name)
         if value is None:
-            raise ValueError(f"Environment variable {var_name} is not set")
+            raise ValueError(f"ERROR: Environment variable {var_name} is not set")
         return value
 
 
