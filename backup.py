@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 
 import os
@@ -263,15 +263,15 @@ class BackupManager:
                 continue
 
             for file in files:
-                # Игнорируем файлы, содержащие любое из ключевых слов в имени
-                if any(keyword in file for keyword in self.ignored_keywords):
-                    logging.warning(f'Ignoring file with ignored keywords in name: {file}')
-                    continue
-
                 # Проверяем, имеет ли файл нужное расширение для базы данных
                 if file.endswith(self.db_extension):
                     logging.info(f'File: {file} -  file.endswith: {file.endswith(self.db_extension)}.')
                     db_path = os.path.join(root, file)
+
+                    # Игнорируем файлы, содержащие любое из ключевых слов в имени
+                    if any(keyword in file for keyword in self.ignored_keywords):
+                        logging.warning(f'Ignoring file with ignored keywords in name: {file}')
+                        continue
 
                     # Проверяем, активен ли файл базы данных (например, открыт другой программой)
                     if await self.check_active_files(db_path):
