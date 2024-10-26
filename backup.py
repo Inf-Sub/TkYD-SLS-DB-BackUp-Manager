@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 
 import os
@@ -97,6 +97,7 @@ class BackupManager:
         """
         # Формируем полный путь к файлу на основе заданной папки и шаблона имени файла
         filename = os.path.join(self.log_folder, datetime.now().strftime(self.log_file_template))
+        print(filename)
         # Создаем необходимые каталоги, если их нет
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         # Открываем файл асинхронно в режиме добавления, чтобы проверить возможность записи
