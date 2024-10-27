@@ -5,11 +5,12 @@ __date__ = '2024/10/27'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.1.5'
+__status__ = 'Development'  # 'Production / Development'
+__version__ = '1.1.6'
 
 
 import os
+import sys
 import shutil
 import hashlib
 import zipfile
@@ -99,7 +100,6 @@ class BackupManager:
         full_path_template = os.path.join(self.log_folder, self.log_file_template)
         # Формируем полный путь к файлу на основе текущей даты и времени
         filename = datetime.now().strftime(full_path_template)
-        print(filename)
         # Создаем необходимые каталоги, если их нет
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         # Открываем файл асинхронно в режиме добавления, чтобы проверить возможность записи
@@ -219,11 +219,16 @@ class BackupManager:
         """
         Останавливает сервер, копируя файл остановки в нужную директорию.
         """
-        try:
-            shutil.copy(self.server_stop_file, self.server_dir)
-            logging.warning('Server stop command issued.')
-        except Exception as e:
-            logging.error(f'Failed to issue server stop command: {e}')
+        if os.path.exists(self.server_stop_file):
+            try:
+                shutil.copy(self.server_stop_file, self.server_dir)
+                logging.warning('Server stop command issued.')
+            except Exception as e:
+                logging.error(f'Failed to issue server stop command: {e}')
+        else:
+            logging.error('Server stop file does not exist.')
+            # Заглушаем ошибку и завершаем выполнение программы
+            raise FileNotFoundError('We are finishing the program execution.')
 
 
     async def start_server(self) -> None:
@@ -342,9 +347,13 @@ class BackupManager:
         """
         Запускает процесс резервного копирования, останавливая сервер перед процессом и перезапуская его после завершения.
         """
-        await self.stop_server()
-        await self.perform_backup()
-        await self.start_server()
+        try:
+            await self.initialize()
+            await self.stop_server()
+            await self.perform_backup()
+            await self.start_server()
+        except FileNotFoundError as e:
+            logging.error(e)
 
 
 if __name__ == "__main__":
@@ -352,11 +361,8 @@ if __name__ == "__main__":
 
     try:
         backup_manager = BackupManager()
-        asyncio.run(backup_manager.initialize())
         asyncio.run(backup_manager.execute())
     except KeyboardInterrupt:
-        print('Execution was interrupted by the user.')
-    except ValueError as err:
-        print(err)
+        logging.info('Execution was interrupted by the user.')  # print
 
     tracemalloc.stop()
