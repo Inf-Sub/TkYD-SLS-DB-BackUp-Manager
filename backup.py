@@ -6,24 +6,26 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.1.7.4'
+__version__ = '1.1.7.5'
 
 
-import os
-import shutil
-import hashlib
-import zipfile
 # import logging
 # from colorlog import ColoredFormatter
 import asyncio
+import hashlib
+import os
+import shutil
+import zipfile
+from datetime import datetime
+from typing import Optional
+
 import aiofiles
 import aiosqlite
-from datetime import datetime
 from dotenv import load_dotenv
-from typing import Optional, Awaitable
-# import tracemalloc
 
 from logger import configure_logging
+
+# import tracemalloc
 
 
 # Загрузка логгера с настройками
@@ -334,9 +336,10 @@ class BackupManager:
                     archive_name = f'{self.archive_name_format.format(
                         db_path=rel_db_path, db_name=file, date_time=today)}{self.archive_format}'
                     # Если файл находится в корневой директории DATABASES_DIR
-                    prefix = f'.{self.path_separator}'
+                    prefix = '.'
                     if rel_db_path == prefix:
-                        archive_name = await self.remove_prefix(archive_name, prefix)
+
+                        archive_name = await self.remove_prefix(archive_name, f'{prefix}{self.path_separator}')
 
                     archive_path = os.path.join(backup_path, archive_name)
 
