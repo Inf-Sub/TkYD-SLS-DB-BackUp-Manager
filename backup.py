@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.1.7'
+__version__ = '1.1.7.1'
 
 
 import os
@@ -118,8 +118,8 @@ class BackupManager:
         """
         value = os.getenv(var_name)
         if value is None:
-            logging.error(f'ERROR: Environment variable {var_name} is not set')
-            raise ValueError(f'ERROR: Environment variable {var_name} is not set')
+            logging.error(f'Environment variable {var_name} is not set')
+            raise ValueError(f'Environment variable {var_name} is not set')
         logging.info(f'Environment variable {var_name} is set to {value}')
         return value
 
@@ -375,5 +375,7 @@ if __name__ == "__main__":
         asyncio.run(backup_manager.execute())
     except KeyboardInterrupt:
         logging.info('Execution was interrupted by the user.')  # print
+    except ValueError as ve:
+        print(str(ve))
 
     tracemalloc.stop()
