@@ -328,7 +328,7 @@ class BackupManager:
                     archive_name = f'{self.archive_name_format.format(
                         db_path=rel_db_path, db_name=file, date_time=today)}{self.archive_format}'
                     # Если файл находится в корневой директории DATABASES_DIR
-                    prefix = '._'
+                    prefix = f'.{self.path_separator}'
                     if rel_db_path == prefix:
                         archive_name = await self.remove_prefix(archive_name, prefix)
 
