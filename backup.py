@@ -10,7 +10,6 @@ __version__ = '1.1.6'
 
 
 import os
-import sys
 import shutil
 import hashlib
 import zipfile
@@ -177,6 +176,12 @@ class BackupManager:
         # Placeholder for the delete operation
 
 
+    @staticmethod
+    async def remove_prefix(text: str, prefix: str) -> str:
+        return text[len(prefix):] if text.startswith(prefix) else text
+
+
+
     async def setup_database(self) -> None:
         async with aiosqlite.connect(self.sqlite_db_path) as db:
             await db.execute('''
@@ -319,8 +324,14 @@ class BackupManager:
 
                     # Создаем имя архива, включая относительный путь базы данных и текущую дату
                     rel_db_path = os.path.relpath(root, self.databases_dir).replace(os.sep, self.path_separator)
+
                     archive_name = f'{self.archive_name_format.format(
                         db_path=rel_db_path, db_name=file, date_time=today)}{self.archive_format}'
+                    # Если файл находится в корневой директории DATABASES_DIR
+                    prefix = '._'
+                    if rel_db_path == prefix:
+                        archive_name = await self.remove_prefix(archive_name, prefix)
+
                     archive_path = os.path.join(backup_path, archive_name)
 
                     try:
