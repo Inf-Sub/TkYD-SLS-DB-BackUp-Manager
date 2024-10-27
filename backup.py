@@ -6,22 +6,28 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.1.7.1'
+__version__ = '1.1.7.4'
 
 
 import os
 import shutil
 import hashlib
 import zipfile
-import logging
+# import logging
+# from colorlog import ColoredFormatter
 import asyncio
 import aiofiles
 import aiosqlite
 from datetime import datetime
-from colorlog import ColoredFormatter
 from dotenv import load_dotenv
 from typing import Optional, Awaitable
-import tracemalloc
+# import tracemalloc
+
+from logger import configure_logging
+
+
+# Загрузка логгера с настройками
+logging = configure_logging()
 
 
 class BackupManager:
@@ -48,63 +54,63 @@ class BackupManager:
         self.active_db_extensions = [ext.strip() for ext in os.getenv('ACTIVE_DB_EXTENSIONS', '.PRE').split(',')]
         self.archive_format = os.getenv('ARCHIVE_FORMAT', '.zip')
         self.path_separator = os.getenv('PATH_SEPARATOR', ' ')
-        self.log_folder = os.getenv('LOG_FOLDER', 'logs')
-        self.log_file_template = os.getenv('LOG_FILE_TEMPLATE', 'log_%Y-%m-%d.log')
-        self.log_format = os.getenv('LOG_FORMAT', '%(asctime)s - %(levelname)6s - %(message)s')
+        # self.log_folder = os.getenv('LOG_FOLDER', 'logs')
+        # self.log_file_template = os.getenv('LOG_FILE_TEMPLATE', 'log_%Y-%m-%d.log')
+        # self.log_format = os.getenv('LOG_FORMAT', '%(asctime)s - %(levelname)6s - %(message)s')
 
         self.sqlite_db_path = os.path.join(self.databases_dir, self.sqlite_db_file)
 
 
-    async def initialize(self):
-        await self.setup_logging()
-
-
-    async def setup_logging(self) -> None:
-        """
-        Настраивает систему логирования для записи логов в файл и отображения их в консоли с цветным форматированием.
-        """
-        formatter = ColoredFormatter(
-            f'%(log_color)s{self.log_format}',
-            datefmt=None,
-            reset=True,
-            log_colors={
-                'DEBUG': 'cyan',
-                'INFO': 'green',
-                'WARNING': 'yellow',
-                'ERROR': 'red',
-                'CRITICAL': 'red,bg_white',
-            }
-        )
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logging.basicConfig(
-            level=logging.INFO,
-            format=self.log_format,
-            handlers=[
-                await self._get_file_handler(),
-                handler
-            ]
-        )
-
-
-    # async def _get_file_handler(self) -> Awaitable[logging.FileHandler]:
-    async def _get_file_handler(self):
-        """
-        Асинхронный метод для получения обработчика файла логирования.
-
-        Returns:
-            Awaitable[logging.FileHandler]: Объект обработчика файла логирования.
-        """
-        # Объединяем путь к папке и шаблон файла
-        full_path_template = os.path.join(self.log_folder, self.log_file_template)
-        # Формируем полный путь к файлу на основе текущей даты и времени
-        filename = datetime.now().strftime(full_path_template)
-        # Создаем необходимые каталоги, если их нет
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        # Открываем файл асинхронно в режиме добавления, чтобы проверить возможность записи
-        async with aiofiles.open(filename, 'a'):
-            # Возвращаем экземпляр обработчика файла логирования
-            return logging.FileHandler(filename)
+    # async def initialize(self):
+    #     await self.setup_logging()
+    #
+    #
+    # async def setup_logging(self) -> None:
+    #     """
+    #     Настраивает систему логирования для записи логов в файл и отображения их в консоли с цветным форматированием.
+    #     """
+    #     formatter = ColoredFormatter(
+    #         f'%(log_color)s{self.log_format}',
+    #         datefmt=None,
+    #         reset=True,
+    #         log_colors={
+    #             'DEBUG': 'cyan',
+    #             'INFO': 'green',
+    #             'WARNING': 'yellow',
+    #             'ERROR': 'red',
+    #             'CRITICAL': 'red,bg_white',
+    #         }
+    #     )
+    #     handler = logging.StreamHandler()
+    #     handler.setFormatter(formatter)
+    #     logging.basicConfig(
+    #         level=logging.INFO,
+    #         format=self.log_format,
+    #         handlers=[
+    #             await self._get_file_handler(),
+    #             handler
+    #         ]
+    #     )
+    #
+    #
+    # # async def _get_file_handler(self) -> Awaitable[logging.FileHandler]:
+    # async def _get_file_handler(self):
+    #     """
+    #     Асинхронный метод для получения обработчика файла логирования.
+    #
+    #     Returns:
+    #         Awaitable[logging.FileHandler]: Объект обработчика файла логирования.
+    #     """
+    #     # Объединяем путь к папке и шаблон файла
+    #     full_path_template = os.path.join(self.log_folder, self.log_file_template)
+    #     # Формируем полный путь к файлу на основе текущей даты и времени
+    #     filename = datetime.now().strftime(full_path_template)
+    #     # Создаем необходимые каталоги, если их нет
+    #     os.makedirs(os.path.dirname(filename), exist_ok=True)
+    #     # Открываем файл асинхронно в режиме добавления, чтобы проверить возможность записи
+    #     async with aiofiles.open(filename, 'a'):
+    #         # Возвращаем экземпляр обработчика файла логирования
+    #         return logging.FileHandler(filename)
 
 
     @staticmethod
@@ -359,7 +365,7 @@ class BackupManager:
         Запускает процесс резервного копирования, останавливая сервер перед процессом и перезапуская его после завершения.
         """
         try:
-            await self.initialize()
+            # await self.initialize()
             await self.stop_server()
             await self.perform_backup()
             await self.start_server()
@@ -368,7 +374,7 @@ class BackupManager:
 
 
 if __name__ == "__main__":
-    tracemalloc.start()
+    # tracemalloc.start()
 
     try:
         backup_manager = BackupManager()
@@ -378,4 +384,4 @@ if __name__ == "__main__":
     except ValueError as ve:
         print(str(ve))
 
-    tracemalloc.stop()
+    # tracemalloc.stop()
