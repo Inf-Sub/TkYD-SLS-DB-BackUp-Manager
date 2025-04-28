@@ -29,7 +29,7 @@ class ServerManager:
 
     Этот класс управляет процессами запуска и остановки сервера, а также проверяет его состояние.
 
-    :ivar env (dict): Словарь с конфигурацией сервера.
+    :ivar _env (dict): Словарь с конфигурацией сервера.
     :ivar server_dir (str): Директория, в которой находится сервер.
     :ivar server_process_name (str): Имя процесса сервера.
     :ivar server_start_file (str): Путь к файлу для запуска сервера.
@@ -63,7 +63,7 @@ class ServerManager:
         :return: Строка, предназначенная для разработки, включая все атрибуты экземпляра.
         """
         return (f"ServerManager:\n"
-                # f"\tenv='{self.env}'\n"
+                # f"\t_env='{self._env}'\n"
                 f"\tserver_dir='{self.server_dir}'\n"
                 f"\tserver_process_name='{self.server_process_name}'\n"
                 f"\tserver_start_file='{self.server_start_file}'\n"

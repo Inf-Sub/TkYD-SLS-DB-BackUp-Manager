@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/04/17'
+__copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+__date__ = '2025/04/28'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.0'
+__version__ = '1.7.3'
 
 
 from sys import platform
@@ -17,11 +17,12 @@ from os.path import exists, join
 from venv import create as venv_create
 
 
+MAIN_SCRIPT = 'run'
+REQUIREMENTS_FILE = 'requirements.txt'
 VENV_PATH = '.venv'
 VENV_INDIVIDUAL = False if getlogin().lower() == __maintainer__.lower() else True
-REQUIREMENTS_FILE = 'requirements.txt'
-MAIN_SCRIPT = "run.py"
-LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-24s| %(levelname)-8s| %(name)-8s\t| %(funcName)-28s| %(message)s'
+LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-20s\t| %(funcName)-28s| %(message)s'
+LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
 LOG_LANGUAGE = 'en'  # en / ru
 LOG_MESSAGE = {
     'venv_create': {
@@ -114,7 +115,7 @@ def create_venv() -> None:
 
     if exists(venv_bin_path):
         install_dependencies(venv_dir=venv_bin_path, requirements_file=REQUIREMENTS_FILE)
-        run_main_script(venv_dir=venv_bin_path, script_name=MAIN_SCRIPT)
+        run_main_script(venv_dir=venv_bin_path, script_name=f'{MAIN_SCRIPT}.py')
     else:
         logging.error(LOG_MESSAGE.get('dir_not_found').get(LOG_LANGUAGE, 'en').format(path=venv_bin_path))
 

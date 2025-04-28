@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/04/17'
+__date__ = '2025/04/23'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.3.0'
+__version__ = '1.0.3.2'
 
 from asyncio import subprocess, create_subprocess_exec
 from os import makedirs as os_makedirs, path as os_path, walk as os_walk, remove as os_remove, listdir as os_listdir
@@ -18,19 +18,22 @@ from aiofiles import open as aio_open
 from datetime import datetime
 from typing import Tuple, Optional, List, Dict, Any
 
-from logger import logging, setup_logger
 from config import Config
+from logger import logging, setup_logger
 
 
 setup_logger()
 logging = logging.getLogger(__name__)
 
 
+# TODO: Проверить в чем проблема если в пути до файла базы данных присутствуют пробелы (или в имени БД).
+
+
 class BackupManager:
     """
     Менеджер резервного копирования, который управляет процессом создания, хранения и удаления резервных копий файлов.
 
-    :ivar env (Dict[str, Any]): Словарь конфигурации с параметрами для резервного копирования файлов.
+    :ivar _env (Dict[str, Any]): Словарь конфигурации с параметрами для резервного копирования файлов.
     :ivar _files_dir (str): Директория, в которой находятся файлы.
     :ivar _files_backup_dir (str): Директория для хранения резервных копий.
     :ivar _files_extensions (List[str]): Список расширений файлов для резервного копирования.
@@ -53,7 +56,7 @@ class BackupManager:
         self._files_min_required_space_gb: float = self.env.get('files_min_required_space_gb')
         self._files_archive_format: str = self.env.get('files_archive_format')
         self._files_7z_path: str = self.env.get('files_7z_path')
-        # self._files_path_separator: str = self.env.get('files_path_separator')
+        # self._files_path_separator: str = self._env.get('files_path_separator')
         self._language = language
         self._hash_extension: Optional[str] = None
         self._date_pattern = r'(_\d{4}\.\d{2}\.\d{2})'
@@ -204,7 +207,7 @@ class BackupManager:
             unique_name,
             modification_timestamp.strftime('%Y'),
             modification_timestamp.strftime('%Y.%m'),
-            modification_timestamp.strftime('%Y.%m.%d')
+            # modification_timestamp.strftime('%Y.%m.%d')
         )
         log_message = {
             'en': f'Create directory: "{backup_path}".',
@@ -318,8 +321,8 @@ class BackupManager:
         
         # Логируем результат проверки
         log_message = {
-            'en': f'{'Sufficient' if has_sufficient_space else 'Not enough'} space for backup',
-            'ru': f'{'Достаточно' if has_sufficient_space else 'Недостаточно'} места для резервной копии',
+            'en': f'{"Sufficient" if has_sufficient_space else "Not enough"} space for backup',
+            'ru': f'{"Достаточно" if has_sufficient_space else "Недостаточно"} места для резервной копии',
         }
         if has_sufficient_space:
             logging.info(log_message.get(self._language, 'en'))
@@ -579,8 +582,8 @@ class BackupManager:
                     break
                 hash_sha256.update(chunk)
         log_message = {
-            'en': f'{log_message.get('en')} | Hash: {hash_sha256.hexdigest()}',
-            'ru': f'{log_message.get('ru')} | Хэш: {hash_sha256.hexdigest()}',
+            'en': f'{log_message.get("en")} | Hash: {hash_sha256.hexdigest()}',
+            'ru': f'{log_message.get("ru")} | Хэш: {hash_sha256.hexdigest()}',
         }
         logging.info(log_message.get(self._language, 'en'))
         return hash_sha256.hexdigest(), hash_type

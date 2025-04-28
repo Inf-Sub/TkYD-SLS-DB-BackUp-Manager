@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/04/13'
+__copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+__date__ = '2025/04/23'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.2.5'
+__version__ = '1.0.3.2'
 
 
 from asyncio import run as aio_run, CancelledError as aio_CancelledError
@@ -40,7 +40,6 @@ async def execute():
         logging.info(f"Start Server.")
         # await server_manager.start_server()
         logging.info(f"Perform File Archiving.")
-        # await backup_manager.perform_backup_archiving()
         await backup_manager.perform_file_archiving()
     except aio_CancelledError:
         logging.warning("Task was cancelled.")
