@@ -1,19 +1,19 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/04/13'
+__date__ = '2025/05/01'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.2.5'
+__version__ = '1.0.2.6'
 
 from asyncio import sleep as aio_sleep
 from shutil import copy as sh_copy
 
 from os import startfile as os_startfile
 from os.path import basename as os_basename
-from psutil import process_iter
+from psutil import process_iter, NoSuchProcess, AccessDenied
 
 from logger import logging, setup_logger
 from config import Config
@@ -144,6 +144,37 @@ class ServerManager:
         
         logging.info(f'Process {process_name} is not running.')
         return False
+    
+    async def _kill_process_by_name(self, process_name: str) -> None:
+        """
+        Завершает процесс по имени.
+
+        :param process_name: Имя процесса, который необходимо завершить.
+        """
+        process = await self._find_process_by_name(process_name)
+        
+        if process:
+            try:
+                # Проверяем, существует ли процесс перед его завершением
+                if process.is_running():
+                    process.kill()
+                    logging.info(f'The process "{process_name}" has been killed.')
+                else:
+                    logging.info(f'The process "{process_name}" is already terminated.')
+            except AccessDenied:
+                logging.warning(f'Access denied to kill process: "{process_name}" (PID: {process.pid}).')
+            except NoSuchProcess:
+                logging.info(f'The process "{process_name}" no longer exists.')
+            except Exception as e:
+                logging.error(f'Error while trying to kill process "{process_name}": {str(e)}')
+        else:
+            logging.info(f'The process "{process_name}" was not found.')
+    
+    async def _kill_processes(self) -> bool:
+        """Убивает процесс сервера и его стартовый файл."""
+        await self._kill_process_by_name(self.server_process_name)
+        await self._kill_process_by_name(os_basename(self.server_start_file))
+        return True
 
     @staticmethod
     async def _find_process_by_name(process_name: str):
@@ -157,26 +188,26 @@ class ServerManager:
             if process.info['name'] == process_name:
                 return process
         return None
-    
-    async def _kill_process_by_name(self, process_name: str) -> None:
-        """
-        Завершает процесс по имени.
-
-        :param process_name: Имя процесса, который необходимо завершить.
-        """
-        process = await self._find_process_by_name(process_name)
-        
-        if process:
-            process.kill()
-            logging.info(f'The process "{process_name}" is completed.')
-        else:
-            logging.info(f'The process "{process_name}" was not found.')
-    
-    async def _kill_processes(self) -> bool:
-        """Убивает процесс сервера и его стартовый файл."""
-        await self._kill_process_by_name(self.server_process_name)
-        await self._kill_process_by_name(os_basename(self.server_start_file))
-        return True
+    #
+    # async def _kill_process_by_name(self, process_name: str) -> None:
+    #     """
+    #     Завершает процесс по имени.
+    #
+    #     :param process_name: Имя процесса, который необходимо завершить.
+    #     """
+    #     process = await self._find_process_by_name(process_name)
+    #
+    #     if process:
+    #         process.kill()
+    #         logging.info(f'The process "{process_name}" is completed.')
+    #     else:
+    #         logging.info(f'The process "{process_name}" was not found.')
+    #
+    # async def _kill_processes(self) -> bool:
+    #     """Убивает процесс сервера и его стартовый файл."""
+    #     await self._kill_process_by_name(self.server_process_name)
+    #     await self._kill_process_by_name(os_basename(self.server_start_file))
+    #     return True
 
 
 if __name__ == "__main__":

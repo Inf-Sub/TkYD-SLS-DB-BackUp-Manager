@@ -5,7 +5,7 @@ __date__ = '2025/04/28'
 __deprecated__ = False
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.0.4.7'
+__version__ = '1.0.4.8'
 
 import logging
 import logging.config
@@ -17,6 +17,15 @@ from datetime import datetime as dt
 
 from config import Config
 
+LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-20s\t| %(funcName)-20s| %(message)s'
+LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
+
+
+# LOG_LANGUAGE = 'en'  # en / ru
+# LOG_MESSAGE = {}
+
+# Настройка логирования
+# logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
 
 def setup_logger(log_path: Optional[str] = None) -> str:
     """
@@ -40,7 +49,7 @@ def setup_logger(log_path: Optional[str] = None) -> str:
     
     if log_path is None:
         log_path = os_join(log_dir, log_file)
-
+    
     log_path = dt.now().strftime(log_path)
     
     try:
@@ -56,48 +65,15 @@ def setup_logger(log_path: Optional[str] = None) -> str:
         return
     
     try:
-        logging.config.dictConfig(
-            {
-                'version': 1,
-                'disable_existing_loggers': False,
-                'formatters': {
-                    'standard': {
-                        'format': log_format_file,
-                    },
-                    'colored': {
-                        '()': ColoredFormatter,
-                        'format': log_format_console,
-                        'datefmt': log_date_format,
-                        'reset': True, 'log_colors': {
-                            'DEBUG': 'cyan',
-                            'INFO': 'green',
-                            'WARNING': 'yellow',
-                            'ERROR': 'red',
-                            'CRITICAL': 'bold_red',
-                        }
-                    }
-                },
-                'handlers': {
-                    'console': {
-                        'class': 'logging.StreamHandler',
-                        'formatter': 'colored',
-                        'level': log_level_console,
-                    },
-                    'rotating_file': {
-                        'class': 'logging.handlers.RotatingFileHandler',
-                        'formatter': 'standard',
-                        'level': log_level_file,
-                        'filename': log_path,
-                        'maxBytes': 10 * 1024 * 1024,
-                        'backupCount': 5,
-                    },
-                },
-                'root': {
-                    'handlers': ['console', 'rotating_file'],
-                    'level': log_level_root,
-                },
-            }
-        )
+        logging.config.dictConfig({'version': 1, 'disable_existing_loggers': False,
+            'formatters': {'standard': {'format': log_format_file, },
+                'colored': {'()': ColoredFormatter, 'format': log_format_console, 'datefmt': log_date_format,
+                    'reset': True, 'log_colors': {'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red',
+                        'CRITICAL': 'bold_red', }}}, 'handlers': {
+                'console': {'class': 'logging.StreamHandler', 'formatter': 'colored', 'level': log_level_console, },
+                'rotating_file': {'class': 'logging.handlers.RotatingFileHandler', 'formatter': 'standard',
+                    'level': log_level_file, 'filename': log_path, 'maxBytes': 10 * 1024 * 1024, 'backupCount': 5, }, },
+            'root': {'handlers': ['console', 'rotating_file'], 'level': log_level_root, }, })
     except Exception as e:
         logging.error(f'Error configuring logging: {e}')
         return
@@ -136,6 +112,8 @@ def change_log_levels(console_level: str, file_level: Optional[str] = None) -> N
             handler.setLevel(file_level)
 
 
+setup_logger()
+
 if __name__ == '__main__':
     log_levels: list = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
     
@@ -143,9 +121,6 @@ if __name__ == '__main__':
     # Example on how to change log levels dynamically
     # This should be replaced with the actual logic for reading the new levels
     def test_console_level(console_level: str) -> None:
-        
-        setup_logger()
-        
         new_console_level = console_level
         change_log_levels(new_console_level)
         
