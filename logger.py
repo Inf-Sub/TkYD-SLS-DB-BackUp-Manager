@@ -1,24 +1,24 @@
 __author__ = 'InfSub'
 __contact__ = 'https:/t.me/InfSub'
 __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-__date__ = '2025/04/28'
+__date__ = '2025/05/01'
 __deprecated__ = False
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.0.4.8'
+__version__ = '1.0.4.9'
 
 import logging
 import logging.config
 from colorlog import ColoredFormatter
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from os.path import join as os_join
 from datetime import datetime as dt
 
 from config import Config
 
-LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-20s\t| %(funcName)-20s| %(message)s'
-LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
+# LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-20s\t| %(funcName)-20s| %(message)s'
+# LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
 
 
 # LOG_LANGUAGE = 'en'  # en / ru
@@ -27,7 +27,7 @@ LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
 # Настройка логирования
 # logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
 
-def setup_logger(log_path: Optional[str] = None) -> str:
+def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
     """
     Configures the logging settings, including file paths and formats.
 
@@ -35,7 +35,7 @@ def setup_logger(log_path: Optional[str] = None) -> str:
 
     :return: None
     """
-    env: dict = Config().get_config('log')
+    env: Dict[str, Any] = Config().get_config('log')
     
     log_level_console: str = env.get('log_level_console')
     log_level_file: str = env.get('log_level_file')
@@ -44,8 +44,8 @@ def setup_logger(log_path: Optional[str] = None) -> str:
     log_format_file: str = env.get('log_format_file')
     log_date_format: str = env.get('log_date_format')
     log_console_language: str = env.get('log_console_language')
-    log_dir = env.get('log_dir', r'logs\%Y\%Y.%m')
-    log_file = env.get('log_file', 'backup_log_%Y.%m.%d.log')
+    log_dir: str = env.get('log_dir', r'logs\%Y\%Y.%m')
+    log_file: str = env.get('log_file', 'backup_log_%Y.%m.%d.log')
     
     if log_path is None:
         log_path = os_join(log_dir, log_file)
@@ -59,26 +59,60 @@ def setup_logger(log_path: Optional[str] = None) -> str:
         log_dir.mkdir(parents=True, exist_ok=True)
     except TypeError:
         logging.error(f'Variable "log_path" must be a Path object or string, not "NoneType"!')
-        return
+        return None
     except Exception as e:
         logging.error(f'Failed to create log directory: {e}')
-        return
+        return None
     
     try:
-        logging.config.dictConfig({'version': 1, 'disable_existing_loggers': False,
-            'formatters': {'standard': {'format': log_format_file, },
-                'colored': {'()': ColoredFormatter, 'format': log_format_console, 'datefmt': log_date_format,
-                    'reset': True, 'log_colors': {'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red',
-                        'CRITICAL': 'bold_red', }}}, 'handlers': {
-                'console': {'class': 'logging.StreamHandler', 'formatter': 'colored', 'level': log_level_console, },
-                'rotating_file': {'class': 'logging.handlers.RotatingFileHandler', 'formatter': 'standard',
-                    'level': log_level_file, 'filename': log_path, 'maxBytes': 10 * 1024 * 1024, 'backupCount': 5, }, },
-            'root': {'handlers': ['console', 'rotating_file'], 'level': log_level_root, }, })
+        logging.config.dictConfig(
+            {
+                'version': 1, 'disable_existing_loggers': False,
+                'formatters': {
+                    'standard': {
+                        'format': log_format_file,
+                    },
+                    'colored': {
+                        '()': ColoredFormatter,
+                        'format': log_format_console,
+                        'datefmt': log_date_format,
+                        'reset': True,
+                        'log_colors': {
+                            'DEBUG': 'cyan',
+                            'INFO': 'green',
+                            'WARNING': 'yellow',
+                            'ERROR': 'red',
+                        'CRITICAL': 'bold_red',
+                        }
+                    }
+                },
+                'handlers': {
+                    'console': {
+                        'class': 'logging.StreamHandler',
+                        'formatter': 'colored',
+                        'level': log_level_console,
+                    },
+                    'rotating_file': {
+                        'class': 'logging.handlers.RotatingFileHandler',
+                        'formatter': 'standard',
+                        'level': log_level_file,
+                        'filename': log_path,
+                        'maxBytes': 10 * 1024 * 1024,
+                        'backupCount': 5,
+                    },
+                },
+                'root': {
+                    'handlers': ['console', 'rotating_file'],
+                    'level': log_level_root,
+                },
+            }
+        )
     except Exception as e:
         logging.error(f'Error configuring logging: {e}')
-        return
+        return None
     
-    log_ignore_list: List[str] = [# 'smbprotocol'
+    log_ignore_list: List[str] = [
+        # 'smbprotocol'
     ]
     
     for logger_name in log_ignore_list:

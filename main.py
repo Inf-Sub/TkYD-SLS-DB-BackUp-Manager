@@ -18,13 +18,13 @@ from venv import create as venv_create
 MAIN_SCRIPT = "run"
 REQUIREMENTS_FILE = 'requirements.txt'
 VENV_PATH = '.venv'
-LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-20s\t| %(funcName)-20s| %(message)s'
+LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-10s| %(funcName)-27s| %(message)s'
 LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
 LOG_LANGUAGE = 'en'  # en / ru
 LOG_MESSAGE = {
     'venv_create': {
         'en': f'Creating a virtual environment in directory "{{path}}"...',
-    'ru': f'Создаем виртуальное окружение в каталоге "{{path}}"...',
+        'ru': f'Создаем виртуальное окружение в каталоге "{{path}}"...',
     },
     'venv_exists': {
         'en': f'Virtual environment already exists in directory "{{path}}".',
@@ -42,7 +42,8 @@ LOG_MESSAGE = {
     'dir_not_found': {
         'en': f'Directory "{{path}}" not found!', 'ru': f'Каталог "{{path}}" не найден!',
     },
-    'file_not_found': {'en': f'File "{{file}}" not found: {{error}}.',
+    'file_not_found': {
+        'en': f'File "{{file}}" not found: {{error}}.',
         'ru': f'Файл "{{file}}" не найден: {{error}}.',
     },
 }
@@ -58,22 +59,22 @@ class VirtualEnvironmentManager:
     def create_virtual_environment(self) -> None:
         """Создает виртуальное окружение в указанной директории."""
         if not exists(self.venv_path):
-            logging.info(LOG_MESSAGE['venv_create'][LOG_LANGUAGE].format(path=self.venv_path))
+            logging.info(LOG_MESSAGE.get('venv_create').get(LOG_LANGUAGE).format(path=self.venv_path))
             venv_create(self.venv_path, with_pip=True)
         else:
-            logging.warning(LOG_MESSAGE['venv_exists'][LOG_LANGUAGE].format(path=self.venv_path))
+            logging.warning(LOG_MESSAGE.get('venv_exists').get(LOG_LANGUAGE).format(path=self.venv_path))
     
     def install_dependencies(self) -> None:
         """Устанавливает зависимости из файла requirements.txt."""
-        pip_executable = os_join(self.venv_path, 'Scripts', 'pip') if platform == "win32" else os_join(self.venv_path,
-                                                                                                       'bin', 'pip')
+        pip_executable = os_join(
+            self.venv_path, 'Scripts', 'pip') if platform == "win32" else os_join(self.venv_path, 'bin', 'pip')
         
-        logging.info(LOG_MESSAGE['requirements'][LOG_LANGUAGE])
+        logging.info(LOG_MESSAGE.get('requirements').get(LOG_LANGUAGE))
         
         try:
             check_call([pip_executable, "install", "-r", REQUIREMENTS_FILE])
         except Exception as e:
-            logging.error(LOG_MESSAGE['file_not_found'][LOG_LANGUAGE].format(file=pip_executable, error=e))
+            logging.error(LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE).format(file=pip_executable, error=e))
     
     def run_main_script(self) -> None:
         """Запускает основной скрипт проекта в виртуальном окружении."""
@@ -82,12 +83,12 @@ class VirtualEnvironmentManager:
         
         try:
             check_call([python_executable, "-m", "pip", "install", "--upgrade", "pip"])
-            logging.info(LOG_MESSAGE['run_script'][LOG_LANGUAGE].format(file=MAIN_SCRIPT))
+            logging.info(LOG_MESSAGE.get('run_script').get(LOG_LANGUAGE).format(file=MAIN_SCRIPT))
             check_call([python_executable, f'{MAIN_SCRIPT}.py'])
         except KeyboardInterrupt:
-            logging.error(LOG_MESSAGE['task_cancelled'][LOG_LANGUAGE])
+            logging.error(LOG_MESSAGE.get('task_cancelled').get(LOG_LANGUAGE))
         except Exception as e:
-            logging.error(LOG_MESSAGE['file_not_found'][LOG_LANGUAGE].format(file=python_executable, error=e))
+            logging.error(LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE).format(file=python_executable, error=e))
     
     def setup(self) -> None:
         """Запускает процесс создания виртуального окружения и установки зависимостей."""
@@ -97,7 +98,7 @@ class VirtualEnvironmentManager:
             self.run_main_script()
         else:
             logging.error(
-                LOG_MESSAGE['file_not_found'][LOG_LANGUAGE].format(file=self.venv_path, error='Directory not found'))
+                LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE).format(file=self.venv_path, error='Directory not found'))
 
 
 if __name__ == "__main__":

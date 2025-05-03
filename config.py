@@ -52,6 +52,8 @@ class Config:
                 'FILES_ARCHIVE_FORMAT': getenv('FILES_ARCHIVE_FORMAT', 'zip'),
                 'FILES_7Z_PATH': getenv('FILES_7Z_PATH', r'c:\Program Files\7-Zip\7z'),
                 # 'FILES_PATH_SEPARATOR': getenv('FILES_PATH_SEPARATOR', ' '),
+                
+                'MSG_LANGUAGE': getenv('MSG_LANGUAGE', 'en').lower(),
 
                 'LOG_DIR': current_date.strftime(getenv('LOG_DIR', r'logs\%Y\%Y.%m')),
                 'LOG_FILE': current_date.strftime(getenv('LOG_FILE', 'backup_log_%Y.%m.%d.log')),
@@ -61,7 +63,6 @@ class Config:
                 'LOG_FORMAT_CONSOLE': getenv('LOG_FORMAT_CONSOLE').replace(r'\t', '\t').replace(r'\n', '\n'),
                 'LOG_FORMAT_FILE': getenv('LOG_FORMAT_FILE').replace(r'\t', '\t').replace(r'\n', '\n'),
                 'LOG_DATE_FORMAT': getenv('LOG_DATE_FORMAT', '%Y.%m.%d %H:%M:%S'),  # Default: None
-                'LOG_CONSOLE_LANGUAGE': getenv('LOG_CONSOLE_LANGUAGE', 'en').lower(),
             }
         except (TypeError, ValueError) as e:
             logging.error(e)

@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-__date__ = '2025/04/23'
+__date__ = '2025/05/01'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.3.2'
+__version__ = '1.0.3.3'
 
 
 from asyncio import run as aio_run, CancelledError as aio_CancelledError
@@ -30,7 +30,7 @@ async def execute():
     копирование, а после этого запускает сервер снова.
     """
     server_manager = ServerManager(language=log_language)
-    backup_manager = BackupManager(language=log_language)
+    backup_manager = BackupManager()
     
     try:
         logging.info(f"Stop Server.")
@@ -38,7 +38,7 @@ async def execute():
         logging.info(f"Perform Copy Files.")
         await backup_manager.perform_copy_files()
         logging.info(f"Start Server.")
-        # await server_manager.start_server()
+        await server_manager.start_server()
         logging.info(f"Perform File Archiving.")
         await backup_manager.perform_file_archiving()
     except aio_CancelledError:
