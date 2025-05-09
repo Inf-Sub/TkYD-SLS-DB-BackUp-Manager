@@ -61,28 +61,28 @@ class BackupManager:
         self._date_pattern: str = r'(_\d{4}\.\d{2}\.\d{2})'
         self._date_format: str = '%Y.%m.%d_%H.%M'
     
-    def _log_message(self, key_suffix: str, level: str = 'info', **kwargs: Any) -> str:
-        """
-        Логирует сообщение на основе заданного уровня логирования и возвращает его.
-
-        :param key_suffix: Суффикс ключа сообщения, который будет добавлен к имени класса и метода.
-        :param level: Уровень логирования. Может быть 'debug', 'info', 'warning', 'error' или 'critical'.
-                      По умолчанию используется 'info'.
-        :param kwargs: Дополнительные параметры для формирования сообщения.
-        :return: Сформированное сообщение в виде строки.
-        """
-        # Сохраняем текущее имя метода
-        current_method_name: str = currentframe().f_back.f_code.co_name  # Получаем имя вызывающего метода
-        msg_key: str = f'{self._class_name}|{current_method_name}|{key_suffix}'
-        message: Optional[str] = self._msg_manager.get_message(msg_key, **kwargs)
-        
-        # Уровни логирования
-        log_levels: Dict[str, Callable[[str], None]] = {'debug': logging.debug, 'info': logging.info,
-            'warning': logging.warning, 'error': logging.error, 'critical': logging.critical, }
-        
-        log_function = log_levels.get(level.lower(), logging.info)
-        log_function(message)
-        return message
+    # def _log_message(self, key_suffix: str, level: str = 'info', **kwargs: Any) -> str:
+    #     """
+    #     Логирует сообщение на основе заданного уровня логирования и возвращает его.
+    #
+    #     :param key_suffix: Суффикс ключа сообщения, который будет добавлен к имени класса и метода.
+    #     :param level: Уровень логирования. Может быть 'debug', 'info', 'warning', 'error' или 'critical'.
+    #                   По умолчанию используется 'info'.
+    #     :param kwargs: Дополнительные параметры для формирования сообщения.
+    #     :return: Сформированное сообщение в виде строки.
+    #     """
+    #     # Сохраняем текущее имя метода
+    #     current_method_name: str = currentframe().f_back.f_code.co_name  # Получаем имя вызывающего метода
+    #     msg_key: str = f'{self._class_name}|{current_method_name}|{key_suffix}'
+    #     message: Optional[str] = self._msg_manager.get_message(msg_key, **kwargs)
+    #
+    #     # Уровни логирования
+    #     log_levels: Dict[str, Callable[[str], None]] = {'debug': logging.debug, 'info': logging.info,
+    #         'warning': logging.warning, 'error': logging.error, 'critical': logging.critical, }
+    #
+    #     log_function = log_levels.get(level.lower(), logging.info)
+    #     log_function(message)
+    #     return message
 
     async def perform_copy_files(self) -> None:
         """

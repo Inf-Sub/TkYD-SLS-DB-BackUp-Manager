@@ -20,7 +20,7 @@ __version__ = '0.0.4'
 # # Загружаем переменные окружения из .env файла
 # load_dotenv()
 
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Callable
 from inspect import currentframe
 
 from config import Config
@@ -112,6 +112,22 @@ class MessageManager:
             logging.error(error_message)
             # raise ValueError(error_message)
             return None
+
+
+def log_message(msg_manager: MessageManager, key_suffix: str, level: str = 'info', **kwargs: Any) -> Optional[str]:
+    """Логирует сообщение с указанным ключом и уровнем."""
+    current_method_name: str = currentframe().f_back.f_code.co_name
+    msg_key: str = f'{msg_manager.__class__.__name__}|{current_method_name}|{key_suffix}'
+    message: Optional[str] = msg_manager.get_message(msg_key, **kwargs)
+    
+    log_levels: Dict[str, Callable[[str], None]] = {'debug': logging.debug, 'info': logging.info,
+        'warning': logging.warning, 'error': logging.error, 'critical': logging.critical, }
+    
+    log_function = log_levels.get(level.lower(), logging.info)
+    
+    if message is not None:
+        log_function(message)
+    return message
 
 
 if __name__ == "__main__":

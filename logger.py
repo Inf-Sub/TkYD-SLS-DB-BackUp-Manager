@@ -5,27 +5,15 @@ __date__ = '2025/05/01'
 __deprecated__ = False
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.0.4.9'
+__version__ = '1.0.4.10'
 
 import logging
-import logging.config
 from colorlog import ColoredFormatter
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from os.path import join as os_join
 from datetime import datetime as dt
 
 from config import Config
-
-# LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-20s\t| %(funcName)-20s| %(message)s'
-# LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
-
-
-# LOG_LANGUAGE = 'en'  # en / ru
-# LOG_MESSAGE = {}
-
-# Настройка логирования
-# logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
 
 def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
     """
@@ -48,9 +36,9 @@ def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
     log_file: str = env.get('log_file', 'backup_log_%Y.%m.%d.log')
     
     if log_path is None:
-        log_path = os_join(log_dir, log_file)
-    
-    log_path = dt.now().strftime(log_path)
+        log_path = Path(log_dir, log_file)
+
+    log_path = dt.now().strftime(str(log_path))
     
     try:
         log_dir = Path(log_path).parent
