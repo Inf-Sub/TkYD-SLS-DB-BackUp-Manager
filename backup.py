@@ -16,7 +16,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from shutil import disk_usage as shutil_disk_usage
 from aiofiles import open as aio_open
 from datetime import datetime
-from typing import Tuple, Optional, List, Dict, Any, Callable
+from typing import Tuple, Optional, List, Dict, Any  #, Callable
 from inspect import currentframe
 
 from config import Config
@@ -128,14 +128,14 @@ class BackupManager:
             
             for file in filtered_files:
                 file_path: str = os_path.join(root, file)
-                self._log_message('processing_file', path=file_path, file=file)
+                self._msg_manager.log_message('processing_file', path=file_path, file=file)
                 
                 if await self._check_file_in_use(file_path):
-                    self._log_message('file_in_use', level='warning', path=file_path)
+                    self._msg_manager.log_message('file_in_use', level='warning', path=file_path)
                     continue  # Пропускаем используемые в данный момент файлы
                 
                 file_name, file_modified_date, is_original = await self._get_backup_name_and_date(file_path=file_path)
-                self._log_message(
+                self._msg_manager.log_message(
                     'file_original', is_original=is_original, is_ignore=self._files_ignore_backup_files, path=file_path)
 
                 if not is_original and self._files_ignore_backup_files:
