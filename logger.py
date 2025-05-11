@@ -143,7 +143,6 @@ setup_logger()
 if __name__ == '__main__':
     log_levels: list = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
     
-    
     # Example on how to change log levels dynamically
     # This should be replaced with the actual logic for reading the new levels
     def test_console_level(console_level: str) -> None:
@@ -158,7 +157,6 @@ if __name__ == '__main__':
         logger.error('Log Level Error!')
         logger.critical('Log Level Critical!')
         logger.critical('')
-    
-    
+
     for level in log_levels:
         test_console_level(level)
