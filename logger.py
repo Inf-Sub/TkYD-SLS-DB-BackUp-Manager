@@ -1,3 +1,12 @@
+__author__ = 'InfSub'
+__contact__ = 'https:/t.me/InfSub'
+__copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+__date__ = '2025/05/09'
+__deprecated__ = False
+__maintainer__ = 'InfSub'
+__status__ = 'Development'  # 'Production / Development'
+__version__ = '1.0.4.12'
+
 import logging
 from logging import config as logging_config
 from colorlog import ColoredFormatter
