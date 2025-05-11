@@ -1,11 +1,11 @@
 __author__ = 'InfSub'
 __contact__ = 'https:/t.me/InfSub'
 __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-__date__ = '2025/04/30'
+__date__ = '2025/04/11'
 __deprecated__ = False
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.6'
+__version__ = '1.7.7'
 
 from sys import platform
 from subprocess import check_call
@@ -98,7 +98,8 @@ class VirtualEnvironmentManager:
             self.run_main_script()
         else:
             logging.error(
-                LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE).format(file=self.venv_path, error='Directory not found'))
+                LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE).format(
+                    file=self.venv_path, error='Directory not found'))
 
 
 if __name__ == "__main__":
