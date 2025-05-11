@@ -57,15 +57,48 @@ def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
         return None
     
     try:
-        logging_config.dictConfig({'version': 1, 'disable_existing_loggers': False,
-            'formatters': {'standard': {'format': log_format_file, },
-                'colored': {'()': ColoredFormatter, 'format': log_format_console, 'datefmt': log_date_format,
-                    'reset': True, 'log_colors': {'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red',
-                        'CRITICAL': 'bold_red', }}}, 'handlers': {
-                'console': {'class': 'logging.StreamHandler', 'formatter': 'colored', 'level': log_level_console, },
-                'rotating_file': {'class': 'logging.handlers.RotatingFileHandler', 'formatter': 'standard',
-                    'level': log_level_file, 'filename': log_path, 'maxBytes': 10 * 1024 * 1024, 'backupCount': 5, }, },
-            'root': {'handlers': ['console', 'rotating_file'], 'level': log_level_root, }, })
+        logging_config.dictConfig(
+            {
+                'version': 1, 'disable_existing_loggers': False,
+                'formatters': {
+                    'standard': {
+                        'format': log_format_file,
+                    },
+                    'colored': {
+                        '()': ColoredFormatter,
+                        'format': log_format_console,
+                        'datefmt': log_date_format,
+                        'reset': True,
+                        'log_colors': {
+                            'DEBUG': 'cyan',
+                            'INFO': 'green',
+                            'WARNING': 'yellow',
+                            'ERROR': 'red',
+                            'CRITICAL': 'bold_red',
+                        }
+                    }
+                },
+                'handlers': {
+                    'console': {
+                        'class': 'logging.StreamHandler',
+                        'formatter': 'colored',
+                        'level': log_level_console,
+                    },
+                    'rotating_file': {
+                        'class': 'logging.handlers.RotatingFileHandler',
+                        'formatter': 'standard',
+                        'level': log_level_file,
+                        'filename': log_path,
+                        'maxBytes': 10 * 1024 * 1024,
+                        'backupCount': 5,
+                    },
+                },
+                'root': {
+                    'handlers': ['console', 'rotating_file'],
+                    'level': log_level_root,
+                },
+            }
+        )
     except Exception as e:
         logging.error(f'Error configuring logging: {e}')
         return None
