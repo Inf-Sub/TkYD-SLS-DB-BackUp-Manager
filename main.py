@@ -14,7 +14,7 @@ from os import getlogin
 from os.path import exists, join as os_join
 from venv import create as venv_create
 
-# Константы
+
 MAIN_SCRIPT = "run"
 REQUIREMENTS_FILE = 'requirements.txt'
 VENV_PATH = '.venv'
