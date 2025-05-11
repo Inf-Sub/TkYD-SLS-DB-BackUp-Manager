@@ -1,34 +1,55 @@
 __author__ = 'InfSub'
-__contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-__date__ = '2025/04/28'
+__contact__ = 'https:/t.me/InfSub'
+__copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+__date__ = '2025/05/10'
 __deprecated__ = False
-__email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.4.5'
-
+__status__ = 'Development'  # 'Production / Development'
+__version__ = '1.0.4.7'
 
 from os import getenv
+from typing import Dict, Any
+
 # from os.path import join as os_join
-# from decouple import config
+# from decouple import __config
 from dotenv import load_dotenv
 from datetime import datetime as dt
 import logging
 
 
 class Config:
-    def __init__(self):
-        # Загрузка переменных окружения из файла ._env
-        load_dotenv()
-        self._current_date = dt.now()
-        self._env = self._load_env()
+    """Синглтон для загрузки и хранения конфигурации приложения."""
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs) -> 'Config':
+        """Создает новый экземпляр класса Config, если он еще не создан.
 
-    def _load_env(self) -> dict:
+        :param args: Позиционные аргументы.
+        :param kwargs: Именованные аргументы.
+        :return: Экземпляр класса Config.
         """
-        Загрузка переменных окружения из файла ._env.
-        
-        :return: Возвращает словарь с параметрами из ._env файла.
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        """Инициализация экземпляра Config.
+
+        Загружает переменные окружения из файла .env и инициализирует параметры.
+        """
+        # Проверяем, инициализирован ли уже экземпляр
+        if not hasattr(self, '_initialized'):
+            self._initialized = True  # Устанавливаем флаг инициализации
+            logging.info('Загрузка переменных окружения из файла .env')
+            load_dotenv()
+            self._current_date = dt.now()
+            self._env = self._load_env()
+    
+    def _load_env(self) -> Dict[str, Any]:
+        """
+        Загрузка переменных окружения из файла .env.
+
+        :return: Возвращает словарь с параметрами из файла .env.
         """
         current_date = self._current_date
         try:
@@ -60,6 +81,7 @@ class Config:
                 'LOG_LEVEL_ROOT': getenv('LOG_LEVEL_ROOT', 'INFO').upper(),
                 'LOG_LEVEL_CONSOLE': getenv('LOG_LEVEL_CONSOLE', 'INFO').upper(),
                 'LOG_LEVEL_FILE': getenv('LOG_LEVEL_FILE', 'WARNING').upper(),
+                'LOG_IGNORE_LIST': getenv('LOG_IGNORE_LIST', ''),
                 'LOG_FORMAT_CONSOLE': getenv('LOG_FORMAT_CONSOLE').replace(r'\t', '\t').replace(r'\n', '\n'),
                 'LOG_FORMAT_FILE': getenv('LOG_FORMAT_FILE').replace(r'\t', '\t').replace(r'\n', '\n'),
                 'LOG_DATE_FORMAT': getenv('LOG_DATE_FORMAT', '%Y.%m.%d %H:%M:%S'),  # Default: None
@@ -68,14 +90,18 @@ class Config:
             logging.error(e)
             exit()
     
-    def get_config(self, config_type: str) -> dict:
+    def get_config(self, *config_types: str) -> Dict[str, Any]:
         """
-        Получение конфигурации по указанному типу.
+        Получение конфигурации по указанным типам.
 
-        :param config_type: Префикс для поиска переменных окружения.
-        :return: Возвращает словарь с параметрами, соответствующими указанному префиксу.
+        :param config_types: Префиксы для поиска переменных окружения.
+        :return: Возвращает словарь с параметрами, соответствующими указанным префиксам.
         """
-        return {key.lower(): self._env[key] for key in self._env.keys() if key.startswith(config_type.upper() + '_')}
+        result = {}
+        for config_type in config_types:
+            result.update(
+                {key.lower(): self._env[key] for key in self._env.keys() if key.startswith(config_type.upper() + '_')})
+        return result
 
 
 if __name__ == "__main__":
