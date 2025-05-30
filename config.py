@@ -57,8 +57,8 @@ class Config:
                 'SERVER_START_FILE': getenv('SERVER_START_FILE', r'C:\Softland Systems\SLS-Serv\monitor.exe'),
                 'SERVER_STOP_FILE': getenv('SERVER_STOP_FILE', r'C:\Softland Systems\SLS-Serv\Exit\Z_Cmnd.tmp'),
                 'SERVER_PROCESS_NAME': getenv('SERVER_PROCESS_NAME', 'SLS_Serv.exe'),
-                'SERVER_WAIT_SECONDS': int(getenv('SERVER_WAIT_SECONDS')) if getenv(
-                    'SERVER_WAIT_SECONDS', '').isdigit() else 10,
+                'SERVER_WAIT_SECONDS':
+                        int(getenv('SERVER_WAIT_SECONDS')) if getenv('SERVER_WAIT_SECONDS', '').isdigit() else 10,
                 
                 'FILES_DIR': getenv('FILES_DIR', r'C:\Softland Systems\DB\DBX'),
                 'FILES_BACKUP_DIR': getenv('FILES_BACKUP_DIR', r'C:\Softland Systems\DB\DBX\Backup'),
