@@ -1,0 +1,4 @@
+aiofiles~=24.1.0
+colorlog~=6.9.0
+python-dotenv>=1.0.1
+psutil~=7.0.0
