@@ -1,23 +1,24 @@
 __author__ = 'InfSub'
 __contact__ = 'https:/t.me/InfSub'
 __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-__date__ = '2025/05/09'
+__date__ = '2025/05/31'
 __deprecated__ = False
 __maintainer__ = 'InfSub'
 __status__ = 'Development'  # 'Production / Development'
-__version__ = '1.0.4.12'
+__version__ = '1.0.4.9'
 
 import logging
-from logging import config as logging_config
+import logging.config
 from colorlog import ColoredFormatter
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
+from os.path import join as os_join
 from datetime import datetime as dt
 
 from config import Config
 
 
-def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
+def setup_logger(log_path: Optional[str] = None) -> str:
     """
     Configures the logging settings, including file paths and formats.
 
@@ -25,39 +26,37 @@ def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
 
     :return: None
     """
-    config: Dict[str, Any] = Config().get_config('log')
-    
-    log_level_console: str = config.get('log_level_console')
-    log_level_file: str = config.get('log_level_file')
-    log_level_root: str = config.get('log_level_root', 'INFO')
-    log_format_console: str = config.get('log_format_console')
-    log_format_file: str = config.get('log_format_file')
-    # Преобразуем строку в список, удаляя пустые значения
-    log_ignore_list: List[str] = [item.strip() for item in config.get('log_ignore_list', '').split(',') if item.strip()]
-    log_date_format: str = config.get('log_date_format')
-    log_console_language: str = config.get('log_console_language')
-    log_dir: str = config.get('log_dir', r'logs\%Y\%Y.%m')
-    log_file: str = config.get('log_file', 'backup_log_%Y.%m.%d.log')
-    
+    env: dict = Config().get_config('log')
+
+    log_level_console: str = env.get('log_level_console')
+    log_level_file: str = env.get('log_level_file')
+    log_level_root: str = env.get('log_level_root', 'INFO')
+    log_format_console: str = env.get('log_format_console')
+    log_format_file: str = env.get('log_format_file')
+    log_date_format: str = env.get('log_date_format')
+    log_console_language: str = env.get('log_console_language')
+    log_dir = env.get('log_dir', r'logs\%Y\%Y.%m')
+    log_file = env.get('log_file', 'backup_log_%Y.%m.%d.log')
+
     if log_path is None:
-        log_path = Path(log_dir, log_file)
-    
-    log_path = dt.now().strftime(str(log_path))
-    
+        log_path = os_join(log_dir, log_file)
+
+    log_path = dt.now().strftime(log_path)
+
     try:
         log_dir = Path(log_path).parent
         if log_dir.exists() and not log_dir.is_dir():
             raise Exception(f'Path exists but is not a directory: {log_dir}')
         log_dir.mkdir(parents=True, exist_ok=True)
-    except TypeError as e:
-        logging.error(f'Variable must be a Path object or string, not "NoneType"! Error: {e}')
+    except TypeError:
+        logging.error(f'Variable "log_path" must be a Path object or string, not "NoneType"!')
         return None
     except Exception as e:
-        logging.error(f'Failed to create directory: {e}')
+        logging.error(f'Failed to create log directory: {e}')
         return None
-    
+
     try:
-        logging_config.dictConfig(
+        logging.config.dictConfig(
             {
                 'version': 1, 'disable_existing_loggers': False,
                 'formatters': {
@@ -102,14 +101,14 @@ def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
     except Exception as e:
         logging.error(f'Error configuring logging: {e}')
         return None
-    
-    # log_ignore_list: List[str] = [
-    #     # 'ignored element'
-    # ]
-    
+
+    log_ignore_list: List[str] = [
+        # 'smbprotocol'
+    ]
+
     for logger_name in log_ignore_list:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
-    
+
     return log_console_language
 
 
@@ -128,7 +127,7 @@ def change_log_levels(console_level: str, file_level: Optional[str] = None) -> N
     root_logger = logging.getLogger()
     if file_level is None:
         file_level = console_level
-    
+
     for handler in root_logger.handlers:
         if isinstance(handler, logging.StreamHandler):
             logging.info(f'Set logger level {console_level} to console.')
@@ -142,14 +141,13 @@ setup_logger()
 
 if __name__ == '__main__':
     log_levels: list = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
-    
-    
+
     # Example on how to change log levels dynamically
     # This should be replaced with the actual logic for reading the new levels
     def test_console_level(console_level: str) -> None:
         new_console_level = console_level
         change_log_levels(new_console_level)
-        
+
         # test
         logger = logging.getLogger(__name__)
         logger.debug('Log Level Debug!')
@@ -158,7 +156,7 @@ if __name__ == '__main__':
         logger.error('Log Level Error!')
         logger.critical('Log Level Critical!')
         logger.critical('')
-    
-    
+
+
     for level in log_levels:
         test_console_level(level)
