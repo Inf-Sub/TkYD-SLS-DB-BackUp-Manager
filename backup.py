@@ -135,7 +135,7 @@ class BackupManager:
                         clean_file_name=clean_file_name, file_path=file_path))
                     await self._delete_file(file_path)
                 
-                #TODO: for test
+                # TODO: for test
                 # print(
                 #     f'{copied_file_path=}', f'{backup_file_name=}', f'{backup_path=}', f'{backup_directory=}',
                 #     f'{file_path=}', sep='\n', end='\n\n'
@@ -487,7 +487,10 @@ class BackupManager:
         # Обход всех файлов в указанной директории
         for root, _, files in os_walk(self._files_dir):
             # Фильтруем файлы по расширениям заранее
-            filtered_files = [file for file in files if file.endswith(tuple(self._files_extensions))]
+            # filtered_files = [file for file in files if file.endswith(tuple(self._files_extensions))]
+            # Фильтруем файлы по расширениям независимо от регистра
+            filtered_files = [
+                file for file in files if file.lower().endswith(tuple(ext.lower() for ext in self._files_extensions))]
             
             for file in filtered_files:
                 file_path = os_path.join(root, file)
@@ -606,7 +609,7 @@ class BackupManager:
         hash_digest = hash_sha256.hexdigest()
         log_message = {
             'en': 'Calculate "{hash_type}" hash: File: {basename} | Hash: {hash_digest}',
-            'ru': '{Вычисляем хэш "{hash_type}": Файл: {basename}} | Хэш: {hash_digest}',
+            'ru': 'Вычисляем хэш "{hash_type}": Файл: {basename} | Хэш: {hash_digest}',
         }
         logging.info(log_message.get(self._language, 'en').format(
             hash_type=hash_type, basename=os_path.basename(file_path), hash_digest=hash_digest))

@@ -53,7 +53,8 @@ class Config:
         """
         current_date = self._current_date
         try:
-            return {'SERVER_DIR': getenv('SERVER_DIR', r'C:\Softland Systems\SLS-Serv'),
+            return {
+                'SERVER_DIR': getenv('SERVER_DIR', r'C:\Softland Systems\SLS-Serv'),
                 'SERVER_START_FILE': getenv('SERVER_START_FILE', r'C:\Softland Systems\SLS-Serv\monitor.exe'),
                 'SERVER_STOP_FILE': getenv('SERVER_STOP_FILE', r'C:\Softland Systems\SLS-Serv\Exit\Z_Cmnd.tmp'),
                 'SERVER_PROCESS_NAME': getenv('SERVER_PROCESS_NAME', 'SLS_Serv.exe'),
