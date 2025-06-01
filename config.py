@@ -1,11 +1,11 @@
-__author__ = 'InfSub'
-__contact__ = 'https:/t.me/InfSub'
-__copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-__date__ = '2025/05/31'
-__deprecated__ = False
-__maintainer__ = 'InfSub'
-__status__ = 'Development'  # 'Production / Development'
-__version__ = '1.0.4.7'
+# __author__ = 'InfSub'
+# __contact__ = 'https:/t.me/InfSub'
+# __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+# __date__ = '2025/06/01'
+# __deprecated__ = False
+# __maintainer__ = 'InfSub'
+# __status__ = 'Development'  # 'Production / Development'
+# __version__ = '1.0.5.0'
 
 from os import getenv
 from typing import Dict, Any

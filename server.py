@@ -1,12 +1,12 @@
-__author__ = 'InfSub'
-__contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/05/01'
-__deprecated__ = False
-__email__ = 'ADmin@TkYD.ru'
-__maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.2.6'
+# __author__ = 'InfSub'
+# __contact__ = 'ADmin@TkYD.ru'
+# __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
+# __date__ = '2025/06/01'
+# __deprecated__ = False
+# __email__ = 'ADmin@TkYD.ru'
+# __maintainer__ = 'InfSub'
+# __status__ = 'Production'  # 'Production / Development'
+# __version__ = '1.0.5.0'
 
 from asyncio import sleep as aio_sleep
 from shutil import copy as sh_copy
