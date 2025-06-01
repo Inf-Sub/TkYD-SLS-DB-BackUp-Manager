@@ -6,9 +6,9 @@
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.0.5.0'
+# __version__ = '1.0.6.0'
 
-from asyncio import subprocess, create_subprocess_exec
+from asyncio import subprocess, create_subprocess_exec, Event as aio_Event
 from os import makedirs as os_makedirs, path as os_path, walk as os_walk, remove as os_remove
 from os import stat as os_stat, utime as os_utime
 from re import search as re_search, sub as re_sub
@@ -29,6 +29,14 @@ logging = logging.getLogger(__name__)
 
 # TODO: Проверить в чем проблема если в пути до файла базы данных присутствуют пробелы (или в имени БД).
 
+# TODO: Проверить использование self._files_dir и self._files_backup_dir, особенно с учетом присвоения
+#  self._files_dir = self._files_backup_dir в self.perform_copy_files()
+
+# TODO: Проверить и исправить возможность вызова self.perform_file_archiving() без предварительного вызова
+#  self.perform_copy_files() что приводит к архивированию файлов в директории self._files_dir и удалению файлов,
+#  нужна проверка что мы не в self._files_dir, либо что более правильно, использование именно self._files_backup_dir,
+#  а не self._files_dir в методах архивации.
+
 
 class BackupManager:
     """
@@ -46,9 +54,8 @@ class BackupManager:
     :ivar _hash_extension (Optional[str]): Расширение для хеш-файлов (например, ".md5" или None).
     :ivar _date_pattern (str): Регулярное выражение для поиска дат в именах файлов.
     :ivar _date_format (str): Формат даты для парсинга.
-    :ivar _file_times (Dict[str, Dict[str, Optional[float]]]): Словарь с метаданными файлов.
+    :ivar _file_times (Dict[str, Dict[str, Optional[datetime]]]): Словарь с метаданными файлов.
     :ivar _metadata_date_format (str): Формат даты метаданных файла.
-    # :ivar _modification_time (Dict[str, Optional[float]]): Словарь с временем последней модификации файлов. (deprecated)
     :ivar _language (str): Язык логов ("en", "ru" и т.д.).
     """
     
@@ -64,14 +71,13 @@ class BackupManager:
         self._files_min_required_space_gb: float = self.env.get('files_min_required_space_gb')
         self._files_archive_format: str = self.env.get('files_archive_format')
         self._files_7z_path: str = self.env.get('files_7z_path')
-        # self._files_path_separator: str = self._env.get('files_path_separator')
         self._hash_extension: Optional[str] = None
         self._date_pattern: str = r'(_\d{4}\.\d{2}\.\d{2})'
         self._date_format: str = '%Y.%m.%d_%H.%M'
-        self._file_times: Dict[str, Dict[str, Optional[float]]] = dict()
-        # self._modification_time: Dict[str, Optional[float]] = dict()  # deprecated
+        self._file_times: Dict[str, Dict[str, Optional[datetime]]] = dict()
         self._metadata_date_format: str = '%Y-%m-%d %H:%M:%S'
         self._language: str = language if isinstance(language, str) else 'en'
+        self.copy_finished_event: aio_Event = aio_Event()
     
     # async def get_file_times(self, backup_file_path: str) -> Optional[float]:
     #     """
@@ -106,6 +112,17 @@ class BackupManager:
     #         }
     #         logging.error(log_message.get(self._language, 'en').format(backup_file_path=backup_file_path, error=e))
     #         return None
+    
+    async def run_backup(self) -> None:
+        # Перед началом копирования сбрасываем событие
+        self.copy_finished_event.clear()
+        await self.perform_copy_files()
+        # После завершения копирования устанавливаем событие
+        self.copy_finished_event.set()
+        await self.perform_file_archiving()
+    
+    async def wait_for_copy_completion(self) -> None:
+        await self.copy_finished_event.wait()
     
     async def get_file_times(self, file_path: str) -> None:
         """
@@ -273,6 +290,12 @@ class BackupManager:
                     await self._delete_file(file_path)
 
         self._files_dir = self._files_backup_dir
+
+        log_message = {
+            'en': 'Copying is completed.',
+            'ru': 'Копирование завершено.',
+        }
+        logging.warning(log_message.get(self._language, 'en'))
 
     async def _check_file_in_use(self, db_path: str) -> bool:
         """
@@ -648,6 +671,12 @@ class BackupManager:
                 # Проверяем хэш и создаем архив, если необходимо
                 # вынести в отдельный цикл по директории с бэкапами
                 await self._handle_backup_archive(backup_file_path)
+
+        log_message = {
+            'en': 'The archiving is completed.',
+            'ru': 'Архивация завершена.',
+        }
+        logging.warning(log_message.get(self._language, 'en'))
     
     async def _handle_backup_archive(self, backup_file_path: str) -> None:
         """
