@@ -1,15 +1,16 @@
-__author__ = 'InfSub'
-__contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/05/31'
-__deprecated__ = False
-__email__ = 'ADmin@TkYD.ru'
-__maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.3.3'
+# __author__ = 'InfSub'
+# __contact__ = 'ADmin@TkYD.ru'
+# __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
+# __date__ = '2025/06/01'
+# __deprecated__ = False
+# __email__ = 'ADmin@TkYD.ru'
+# __maintainer__ = 'InfSub'
+# __status__ = 'Production'  # 'Production / Development'
+# __version__ = '1.0.5.0'
 
 from asyncio import subprocess, create_subprocess_exec
-from os import makedirs as os_makedirs, path as os_path, walk as os_walk, remove as os_remove, listdir as os_listdir
+from os import makedirs as os_makedirs, path as os_path, walk as os_walk, remove as os_remove
+from os import stat as os_stat, utime as os_utime
 from re import search as re_search, sub as re_sub
 from hashlib import sha256
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -33,16 +34,22 @@ class BackupManager:
     """
     Менеджер резервного копирования, который управляет процессом создания, хранения и удаления резервных копий файлов.
 
-    :ivar _env (Dict[str, Any]): Словарь конфигурации с параметрами для резервного копирования файлов.
-    :ivar _files_dir (str): Директория, в которой находятся файлы.
+    :ivar _env (Dict[str, Any]): Конфигурационный словарь с параметрами для резервного копирования файлов.
+    :ivar _files_dir (str): Директория с исходными файлами.
     :ivar _files_backup_dir (str): Директория для хранения резервных копий.
     :ivar _files_extensions (List[str]): Список расширений файлов для резервного копирования.
-    :ivar _files_in_use_extensions (List[str]): Список открытых (используемых в данный момент) расширений файлов.
-    :ivar _files_ignore_backup_files (bool): Игнорировать резервные копии файлов (файлы с датами в имени).
-    :ivar _files_min_required_space_gb (float): Минимально необходимое количество свободного места на диске, в Гб.
-    :ivar _files_archive_format (str): Формат архивов для резервного копирования.
-    :ivar _files_7z_path (str): Пути до архиватора 7z.
-    :ivar _language (str): Язык логов в консоли.
+    :ivar _files_in_use_extensions (List[str]): Список расширений файлов, которые используются в данный момент.
+    :ivar _files_ignore_backup_files (bool): Игнорировать файлы резервных копий (с датами в имени).
+    :ivar _files_min_required_space_gb (float): Минимально необходимое свободное место на диске в Гб.
+    :ivar _files_archive_format (str): Формат архивирования (например, zip, 7z).
+    :ivar _files_7z_path (str): Путь к архиватору 7z.
+    :ivar _hash_extension (Optional[str]): Расширение для хеш-файлов (например, ".md5" или None).
+    :ivar _date_pattern (str): Регулярное выражение для поиска дат в именах файлов.
+    :ivar _date_format (str): Формат даты для парсинга.
+    :ivar _file_times (Dict[str, Dict[str, Optional[float]]]): Словарь с метаданными файлов.
+    :ivar _metadata_date_format (str): Формат даты метаданных файла.
+    # :ivar _modification_time (Dict[str, Optional[float]]): Словарь с временем последней модификации файлов. (deprecated)
+    :ivar _language (str): Язык логов ("en", "ru" и т.д.).
     """
     
     def __init__(self, language: Optional[str] = 'en') -> None:
@@ -58,10 +65,138 @@ class BackupManager:
         self._files_archive_format: str = self.env.get('files_archive_format')
         self._files_7z_path: str = self.env.get('files_7z_path')
         # self._files_path_separator: str = self._env.get('files_path_separator')
-        self._language = language if isinstance(language, str) else 'en'
         self._hash_extension: Optional[str] = None
-        self._date_pattern = r'(_\d{4}\.\d{2}\.\d{2})'
-        self._date_format = '%Y.%m.%d_%H.%M'
+        self._date_pattern: str = r'(_\d{4}\.\d{2}\.\d{2})'
+        self._date_format: str = '%Y.%m.%d_%H.%M'
+        self._file_times: Dict[str, Dict[str, Optional[float]]] = dict()
+        # self._modification_time: Dict[str, Optional[float]] = dict()  # deprecated
+        self._metadata_date_format: str = '%Y-%m-%d %H:%M:%S'
+        self._language: str = language if isinstance(language, str) else 'en'
+    
+    # async def get_file_times(self, backup_file_path: str) -> Optional[float]:
+    #     """
+    #     Обновляет время последней модификации файла по заданному пути.
+    #     Возвращает время модификации или None, если файл не найден.
+    #     """
+    #     try:
+    #         file_name = os_path.basename(backup_file_path).upper()
+    #         mtime = os_path.getmtime(backup_file_path)
+    #         self._modification_time[file_name] = mtime
+    #
+    #         log_message = {
+    #             'en': 'The time of modification of the file "{backup_file_path}" was received: "{time}".',
+    #             'ru': 'Получено время модификации файла "{backup_file_path}": "{time}".',
+    #         }
+    #         logging.debug(log_message.get(self._language, 'en').format(
+    #             backup_file_path=backup_file_path, time=datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')))
+    #         return mtime
+    #     except FileNotFoundError:
+    #         # Не вносим изменений в словарь
+    #         log_message = {
+    #             'en': 'File not found: "{backup_file_path}". No data was added to "_modification_time".',
+    #             'ru': 'Файл не найден: "{backup_file_path}". В переменную "_modification_time" ничего не добавлено.',
+    #         }
+    #         logging.warning(log_message.get(self._language, 'en').format(backup_file_path=backup_file_path))
+    #         return None
+    #     except Exception as e:
+    #         # Не вносим изменений в словарь при ошибке
+    #         log_message = {
+    #             'en': 'Error getting modification time of file "{backup_file_path}": {error}',
+    #             'ru': 'Ошибка при получении времени модификации файла "{backup_file_path}": {error}',
+    #         }
+    #         logging.error(log_message.get(self._language, 'en').format(backup_file_path=backup_file_path, error=e))
+    #         return None
+    
+    async def get_file_times(self, file_path: str) -> None:
+        """
+        Обновляет и возвращает информацию о времени файла по заданному пути.
+        
+        :param file_path: Путь к файлу.
+        """
+        try:
+            stat_info = os_stat(file_path)
+            # Формируем словарь с нужными датами
+            file_info = {
+                'modification_time': datetime.fromtimestamp(stat_info.st_mtime),
+                # 'creation_time': datetime.fromtimestamp(stat_info.st_ctime),
+                'access_time': datetime.fromtimestamp(stat_info.st_atime),
+            }
+            self._file_times[file_path.upper()] = file_info
+            
+            log_message = {
+                'en': 'Metadata from the file "{file_path}". '
+                      'Time of the last modification: {mod_time}; Last access time: {acc_time}.',
+                'ru': 'Получены метаданные из файла "{file_path}". '
+                      'Время последней модификации: {mod_time}; Время последнего доступа: {acc_time}.',
+            }
+            logging.debug(
+                log_message.get(self._language, 'en').format(
+                    file_path=file_path,
+                    mod_time=file_info['modification_time'].strftime(self._metadata_date_format),
+                    # cre_time=file_info['creation_time'].strftime(self._metadata_date_format),
+                    acc_time=file_info['access_time'].strftime(self._metadata_date_format),
+                )
+            )
+        except FileNotFoundError:
+            log_message = {
+                'en': 'File not found:"{file_path}". No data was added to "_file_times".',
+                'ru': 'Файл не найден: "{file_path}". В переменную "_file_times" ничего не добавлено.',
+            }
+            logging.warning(log_message.get(self._language, 'en').format(file_path=file_path))
+        except Exception as e:
+            log_message = {
+                'en': 'Error getting file times of "{file_path}": {error}',
+                'ru': 'Ошибка при получении временных меток файла "{file_path}": {error}',
+            }
+            logging.error(log_message.get(self._language, 'en').format(file_path=file_path, error=e))
+
+    async def set_file_times(self, original_path: str, target_path: str, params: Optional[List[str]] = None) -> None:
+        """
+        Устанавливает параметры времени для файла по целевому пути на основе данных исходного файла.
+
+        :param original_path: Путь к исходному файлу.
+        :param target_path: Путь к целевому файлу.
+        :param params: Список параметров, которые нужно установить ('modification_time', 'access_time').
+        Если не указан, устанавливаются все.
+
+        """
+        if original_path.upper() not in self._file_times:
+            log_message = {
+                'en': 'No time data available for source file: {file_path}.',
+                'ru': 'Нет данных о времени исходного файла: {file_path}.',
+            }
+            logging.error(log_message.get(self._language, 'en').format(file_path=original_path))
+            await self.get_file_times(original_path)
+
+        source_file_times = self._file_times[original_path.upper()]
+        if params is None:
+            params = ['modification_time', 'access_time']
+
+        try:
+            # Получаем текущие метки времени целевого файла
+            await self.get_file_times(target_path)
+            target_file_times = self._file_times[target_path.upper()]
+            target_atime = target_file_times.get('access_time', None)
+            target_mtime = target_file_times.get('modification_time', None)
+
+            if 'access_time' in params:
+                target_atime = source_file_times.get('access_time', target_atime).timestamp()
+            if 'modification_time' in params:
+                target_mtime = source_file_times.get('modification_time', target_mtime).timestamp()
+
+            os_utime(target_path, times=(target_atime, target_mtime))
+
+            self._file_times[target_path.upper()] = {
+                'modification_time': source_file_times.get('modification_time', datetime.fromtimestamp(target_mtime)),
+                # 'creation_time': source_times.get('creation_time', datetime.fromtimestamp(ctime)),
+                'access_time': source_file_times.get('access_time', datetime.fromtimestamp(target_atime)),
+            }
+        except Exception as e:
+            log_message = {
+                'en': 'Error setting file times for "{target_path}": "{error}".',
+                'ru': 'Ошибка установки времени файла для "{target_path}": "{error}".',
+            }
+            logging.error(log_message.get(self._language, 'en').format(target_path=target_path, error=e))
 
     async def perform_copy_files(self) -> None:
         copy_pattern = r'\s*[-—]\s*копия'
@@ -87,7 +222,7 @@ class BackupManager:
                     logging.warning(log_message.get(self._language, 'en').format(file_path=file_path))
                     continue  # Пропускаем используемые в данный момент файлы
                 
-                file_name, file_modified_date, is_original = await self._get_backup_name_and_date(
+                filename_without_ext, file_modified_date, is_original = await self._get_backup_name_and_date(
                     file_path=file_path)
                 log_message = {
                     'en': 'File is original (not a copy): "{is_original}". '
@@ -99,20 +234,21 @@ class BackupManager:
                     is_original=is_original, ignore_backup=self._files_ignore_backup_files, file_path=file_path))
 
                 if not is_original and self._files_ignore_backup_files:
+                    # Пропускаем резервные копии файлов БД (файлы с датой в имени)
                     log_message = {
                         'en': 'This file "{file_path}" is a backup, skipping backup.',
                         'ru': 'Этот файл "{file_path}" является резервной копией, резервное копирование пропускается.',
                     }
                     logging.warning(log_message.get(self._language, 'en').format(file_path=file_path))
-                    continue  # Пропускаем резервные копии файлов БД (файлы с датой в имени)
+                    continue
                 
                 # Очищаем имя файла от суффикса "копия", при его наличии
-                clean_file_name = re_sub(copy_pattern, '', file_name)
+                clean_file_name = re_sub(copy_pattern, '', filename_without_ext)
                 _, file_extension = os_path.splitext(file_path)
                 backup_file_name = f'{clean_file_name}_{file_modified_date}{file_extension}'
                 
                 backup_directory = await self._prepare_backup_directory(unique_name=clean_file_name, file_path=file_path)
-                backup_path = os_path.join(backup_directory, backup_file_name)
+                backup_file_path = os_path.join(backup_directory, backup_file_name)
                 await self._ensure_sufficient_space(backup_directory, file_path)
                 
                 # Копируем файл БД
@@ -121,25 +257,21 @@ class BackupManager:
                     'ru': 'Копируем файл: {file_path} в {backup_path}.',
                 }
                 logging.warning(log_message.get(self._language, 'en').format(
-                    file_path=file_path, backup_path=backup_path))
-                _ = await self._copy_file(file_path, backup_path)
+                    file_path=file_path, backup_path=backup_file_path))
+                # Копируем файл в папку с архивами
+                _ = await self._copy_file(file_path=file_path, backup_file_path=backup_file_path)
                 
-                if clean_file_name != file_name:
+                if clean_file_name != filename_without_ext:
                     log_message = {
-                        'en': 'The new file name "{clean_file_name}" is not equal to the old "{file_name}". '
+                        'en': 'The new file name "{file_path}" is not equal to the old "{file_name}". '
                               'Deleting file: "{file_path}".',
-                        'ru': 'Новое имя файла "{clean_file_name}" не равно старому "{file_name}". '
+                        'ru': 'Новое имя файла "{file_path}" не равно старому "{file_name}". '
                               'Удаляем файл: "{file_path}".',
                     }
                     logging.warning(log_message.get(self._language, 'en').format(
                         clean_file_name=clean_file_name, file_path=file_path))
                     await self._delete_file(file_path)
-                
-                # TODO: for test
-                # print(
-                #     f'{copied_file_path=}', f'{backup_file_name=}', f'{backup_path=}', f'{backup_directory=}',
-                #     f'{file_path=}', sep='\n', end='\n\n'
-                # )
+
         self._files_dir = self._files_backup_dir
 
     async def _check_file_in_use(self, db_path: str) -> bool:
@@ -164,16 +296,19 @@ class BackupManager:
                  указывающий, является ли файл оригинальным (без даты в имени).
         """
         date_pattern = self._date_pattern
+        file_name = os_path.basename(file_path)
+        
         log_message = {
-            'en': 'Getting backup name and date for {file_path}: {date_pattern}',
-            'ru': 'Получение имени и даты резервной копии для {file_path}: {date_pattern}',
+            'en': 'Getting backup name and date for "{file_path}": {date_pattern}',
+            'ru': 'Получение имени и даты резервной копии для "{file_path}": {date_pattern}',
         }
         logging.info(log_message.get(self._language, 'en').format(file_path=file_path, date_pattern=date_pattern))
+    
+        await self.get_file_times(file_path)
+
+        modification_timestamp = self._file_times.get(file_path.upper(), {}).get('modification_time', None)
+        modified_date = modification_timestamp.strftime(self._date_format)
         
-        modification_time = os_path.getmtime(file_path)
-        modified_date = datetime.fromtimestamp(modification_time).strftime(self._date_format)
-        
-        file_name = os_path.basename(file_path)
         match = re_search(date_pattern, file_name)
         
         if not match:
@@ -206,8 +341,8 @@ class BackupManager:
         :param file_path: Путь до файла.
         :return: Путь к директории, в которую будет сохранена резервная копия.
         """
-        modification_time = os_path.getmtime(file_path)
-        modification_timestamp = datetime.fromtimestamp(modification_time)
+        modification_timestamp = self._file_times.get(file_path.upper(), {}).get('modification_time', None)
+
         backup_path = os_path.join(
             self._files_backup_dir,
             unique_name,
@@ -221,6 +356,7 @@ class BackupManager:
         }
         logging.info(log_message.get(self._language, 'en').format(backup_path=backup_path))
         os_makedirs(backup_path, exist_ok=True)
+        
         return backup_path
 
     async def _ensure_sufficient_space(self, backup_path: str, db_path: str) -> None:
@@ -239,7 +375,7 @@ class BackupManager:
         while not await self._has_sufficient_space(backup_path, db_path):
             await self._delete_oldest_backup(db_path)
 
-    async def _copy_file(self, file_path: str, backup_path: str) -> str:
+    async def _copy_file(self, file_path: str, backup_file_path: str) -> str:
         """
         Копирует файл в директорию для бэкапа.
 
@@ -248,15 +384,18 @@ class BackupManager:
         записывается информационное сообщение в лог.
 
         :param file_path: Путь к исходному файлу, который необходимо скопировать.
-        :param backup_path: Путь к директории, в которую будет скопирован файл.
+        :param backup_file_path: Путь к директории, в которую будет скопирован файл.
         :return: Путь к созданному резервному файлу.
         :raises Exception: В случае ошибки при чтении или записи файла.
         """
         # Реализация копирования файла
-        backup_file_path = backup_path
         async with aio_open(file_path, 'rb') as src_file:
             async with aio_open(backup_file_path, 'wb') as dst_file:
                 await dst_file.write(await src_file.read())
+        
+        # Установка времени последней модификации для нового файла
+        # os_utime(backup_file_path, times=(stat_info.st_atime, mtime))
+        await self.set_file_times(file_path, backup_file_path)
         
         log_message = {
             'en': 'File: "{file_path}" copied to "{backup_file_path}".',
@@ -339,7 +478,7 @@ class BackupManager:
         
         return has_sufficient_space
     
-    # async def _delete_oldest_backup(self, file_path: str) -> None:
+    # async def _delete_oldest_backup(self, backup_file_path: str) -> None:
     #     """
     #     Удаляет самую старую резервную копию для указанного файла.
     #
@@ -348,27 +487,27 @@ class BackupManager:
     #     Это необходимо для управления пространством хранения и предотвращения
     #     переполнения диска.
     #
-    #     :param file_path: Путь к файлу, для которого нужно удалить резервную копию.
+    #     :param backup_file_path: Путь к файлу, для которого нужно удалить резервную копию.
     #     :raises FileNotFoundError: Если резервные копии не найдены.
     #     :raises Exception: В случае ошибки при удалении резервной копии.
     #     """
     #     # Получаем директорию резервных копий
-    #     backup_dir = self._get_backup_directory(file_path)
+    #     backup_dir = self._get_backup_directory(backup_file_path)
     #
     #     # Получаем список всех резервных копий для данного файла
     #     backups: List[str] = []
     #     for dirpath, _, filenames in os_walk(backup_dir):
     #         for filename in filenames:
-    #             if filename.startswith(os_path.basename(file_path)):
+    #             if filename.startswith(os_path.basename(backup_file_path)):
     #                 backups.append(os_path.join(dirpath, filename))
     #
     #     if not backups:
     #         log_message = {
-    #             'en': 'No backups found for "{file_path}".',
-    #             'ru': 'Резервные копии для "{file_path}" не найдены.',
+    #             'en': 'No backups found for "{backup_file_path}".',
+    #             'ru': 'Резервные копии для "{backup_file_path}" не найдены.',
     #         }
-    #         logging.error(log_message.get(self._language, 'en').format(file_path=file_path))
-    #         raise FileNotFoundError(f'No backups found for "{file_path}".')
+    #         logging.error(log_message.get(self._language, 'en').format(backup_file_path=backup_file_path))
+    #         raise FileNotFoundError(f'No backups found for "{backup_file_path}".')
     #
     #     # Находим самую старую резервную копию
     #     oldest_backup = min(backups, key=os_path.getctime)
@@ -381,7 +520,7 @@ class BackupManager:
     #
     #     await self._delete_file(oldest_backup)
     
-    async def _delete_oldest_backup(self, file_path: str, skip_conditions: List[str] = None) -> None:
+    async def _delete_oldest_backup(self, backup_file_path: str, skip_conditions: List[str] = None) -> None:
         """
         Удаляет самую старую резервную копию для указанного файла.
 
@@ -390,19 +529,25 @@ class BackupManager:
         Это необходимо для управления пространством хранения и предотвращения
         переполнения диска.
 
-        :param file_path: Путь к файлу, для которого нужно удалить резервную копию.
+        :param backup_file_path: Путь к файлу, для которого нужно удалить резервную копию.
         :param skip_conditions: Список условий для пропуска архивов.
         :raises FileNotFoundError: Если резервные копии не найдены.
         :raises Exception: В случае ошибки при удалении резервной копии.
         """
         # Получаем директорию резервных копий
-        backup_dir = self._get_backup_directory(file_path)
+        try:
+            backup_dir = self._get_backup_directory(backup_file_path)
+        except Exception as e:
+            # Временно, пока метод не дописан и self._get_backup_directory метод не реализован
+            logging.error(e)
+            # raise e
+            return
         
         # Получаем список всех резервных копий для данного файла
         backups: List[str] = []
         for dirpath, _, filenames in os_walk(backup_dir):
             for filename in filenames:
-                if filename.startswith(os_path.basename(file_path)):
+                if filename.startswith(os_path.basename(backup_file_path)):
                     # Проверяем условия для пропуска архива
                     if skip_conditions and any(condition in filename for condition in skip_conditions):
                         continue
@@ -413,8 +558,8 @@ class BackupManager:
                 'en': 'No backups found for "{file_path}".',
                 'ru': 'Резервные копии для "{file_path}" не найдены.',
             }
-            logging.error(log_message.get(self._language, 'en').format(file_path=file_path))
-            raise FileNotFoundError(f'No backups found for "{file_path}".')
+            logging.error(log_message.get(self._language, 'en').format(file_path=backup_file_path))
+            raise FileNotFoundError(f'No backups found for "{backup_file_path}".')
         
         # Группируем резервные копии по уникальным именам файлов
         filename_groups = {}
@@ -493,18 +638,18 @@ class BackupManager:
                 file for file in files if file.lower().endswith(tuple(ext.lower() for ext in self._files_extensions))]
             
             for file in filtered_files:
-                file_path = os_path.join(root, file)
+                backup_file_path = os_path.join(root, file)
                 log_message = {
                     'en': 'Processing file path: "{file_path}". File: "{file}".',
                     'ru': 'Обработка пути к файлу: "{file_path}". Файл: "{file}".',
                 }
-                logging.info(log_message.get(self._language, 'en').format(file_path=file_path, file=file))
+                logging.info(log_message.get(self._language, 'en').format(file_path=backup_file_path, file=file))
 
                 # Проверяем хэш и создаем архив, если необходимо
                 # вынести в отдельный цикл по директории с бэкапами
-                await self._handle_backup_archive(file_path)
+                await self._handle_backup_archive(backup_file_path)
     
-    async def _handle_backup_archive(self, file_path: str) -> None:
+    async def _handle_backup_archive(self, backup_file_path: str) -> None:
         """
         Сравнивает хэши и создает архив, если резервной копии с таким хэшем еще нет.
     
@@ -512,18 +657,18 @@ class BackupManager:
         сравнивая его хэш с ранее сохраненными хэшами. Если резервная копия отсутствует,
         создается новый архив, а исходный файл удаляется.
     
-        :param file_path: Путь к файлу, для которого необходимо создать резервную копию.
+        :param backup_file_path: Путь к файлу, для которого необходимо создать резервную копию.
         :raises Exception: В случае ошибки при создании архива или удалении файла.
         """
-        if await self._should_skip_backup(file_path):
+        if await self._should_skip_backup(backup_file_path):
             return  # Пропускаем, если резервная копия уже существует
         
         # Создаем архив
-        await self._create_backup_archive(file_path)
+        await self._create_backup_archive(backup_file_path)
         # Удаляем файл после создания архива
-        await self._delete_file(file_path)
+        await self._delete_file(backup_file_path)
 
-    async def _should_skip_backup(self, file_path: str) -> bool:
+    async def _should_skip_backup(self, backup_file_path: str) -> bool:
         """
         Определяет, следует ли пропустить создание резервной копии.
 
@@ -533,11 +678,15 @@ class BackupManager:
         создание новой резервной копии не требуется. В противном случае текущий хэш
         будет записан в файл, и резервное копирование будет выполнено.
 
-        :param file_path: Путь к файлу для резервного копирования / архивирования.
+        :param backup_file_path: Путь к файлу для резервного копирования / архивирования.
         :return: True, если резервная копия не требуется; False в противном случае.
         """
-        current_hash, self._hash_extension = await self._calculate_file_hash(file_path)
-        hash_file_path = os_path.join(self._files_backup_dir, f'{os_path.basename(file_path)}.{self._hash_extension}')
+        file_name = os_path.basename(backup_file_path)
+
+        await self.get_file_times(backup_file_path)
+        
+        current_hash, self._hash_extension = await self._calculate_file_hash(backup_file_path)
+        hash_file_path = os_path.join(self._files_backup_dir, f'{file_name}.{self._hash_extension}')
 
         if os_path.exists(hash_file_path):
             async with aio_open(hash_file_path, 'r') as hash_file:
@@ -551,20 +700,20 @@ class BackupManager:
                     ,
                 }
                 logging.info(log_message.get(self._language, 'en').format(
-                    file_path=file_path, current_hash=current_hash, last_hash=last_hash))
+                    file_path=backup_file_path, current_hash=current_hash, last_hash=last_hash))
                 if current_hash == last_hash:
                     log_message = {
                         'en': 'No changes in file: "{file_path}", skipping backup.',
                         'ru': 'Нет изменений в файле: "{file_path}", резервное копирование пропускается.',
                     }
-                    logging.info(log_message.get(self._language, 'en').format(file_path=file_path))
+                    logging.info(log_message.get(self._language, 'en').format(file_path=backup_file_path))
 
                     log_message = {
                         'en': 'Delete a copy of the file: "{file_path}".',
                         'ru': 'Удаляем копию файла: "{file_path}".',
                     }
-                    logging.warning(log_message.get(self._language, 'en').format(file_path=file_path))
-                    await self._delete_file(file_path)
+                    logging.warning(log_message.get(self._language, 'en').format(file_path=backup_file_path))
+                    await self._delete_file(backup_file_path)
                     
                     return True
         
@@ -572,9 +721,24 @@ class BackupManager:
             'en': 'Write the file hash: "{file_path}", to the file: "{hash_file_path}".',
             'ru': 'Записываем хэш файла: "{file_path}", в файл: "{hash_file_path}".',
         }
-        logging.info(log_message.get(self._language, 'en').format(file_path=file_path, hash_file_path=hash_file_path))
+        logging.info(log_message.get(self._language, 'en').format(file_path=backup_file_path, hash_file_path=hash_file_path))
+        
         async with aio_open(hash_file_path, 'w') as hash_file:
             await hash_file.write(current_hash)
+            
+        # Устанавливаем дату хэш файла равной дате архивируемого файла
+        modification_time = self._file_times.get(backup_file_path.upper(), {}).get('modification_time', None)
+        # os_utime(hash_file_path, times=(modification_time, modification_time))
+        await self.set_file_times(backup_file_path, hash_file_path)
+
+        log_message = {
+            'en': 'Install the date of the Hash file "{hash_file_path}" equal to the date "{time}" of the archive file '
+                  '"{file_path}".',
+            'ru': 'Устанавливаем дату хэш файла "{hash_file_path}" равной дате "{time}" архивируемого файла '
+                  '"{file_path}".',
+        }
+        logging.info(log_message.get(self._language, 'en').format(
+            hash_file_path=hash_file_path, time=modification_time, file_path=backup_file_path))
 
         return False
 
@@ -594,7 +758,7 @@ class BackupManager:
         #     'en': 'Calculate "{hash_type}" hash: File: {basename}',
         #     'ru': 'Вычисляем хэш "{hash_type}": Файл: {basename}',
         # }
-        # message = log_message.get(self._language, 'en').format(hash_type=hash_type, basename=os_path.basename(file_path))
+        # message = log_message.get(self._language, 'en').format(hash_type=hash_type, basename=os_path.basename(backup_file_path))
         # logging.info(message)
 
         hash_sha256 = sha256()
@@ -615,23 +779,22 @@ class BackupManager:
             hash_type=hash_type, basename=os_path.basename(file_path), hash_digest=hash_digest))
         return hash_sha256.hexdigest(), hash_type
 
-    async def _create_backup_archive(self, file_path: str) -> None:
+    async def _create_backup_archive(self, backup_file_path: str) -> None:
         """
         Создает архив с резервной копией файла.
 
-        Этот метод принимает путь к файлу и создает его резервную копию в формате,
-        указанном в параметрах. Если доступен 7z, используется этот формат,
-        в противном случае создается zip-архив.
+        Этот метод принимает путь к файлу и создает его резервную копию в формате, указанном в параметрах. Если
+        доступен 7z, используется этот формат, в противном случае создается zip-архив.
 
-        :param file_path: Путь до файла для резервного копирования.
+        :param backup_file_path: Путь до файла для резервного копирования.
         :raises Exception: В случае ошибки при создании архива.
         """
-        backup_directory = os_path.dirname(file_path)
-        backup_file_name = os_path.basename(file_path)
+        backup_directory = os_path.dirname(backup_file_path)
+        file_name = os_path.basename(backup_file_path)
 
         archive_format = self._files_archive_format.lower()
-        archive_name = f"{backup_file_name}.{archive_format}"
-        archive_path = os_path.join(backup_directory, archive_name)
+        archive_name = f"{file_name}.{archive_format}"
+        archive_file_path = os_path.join(backup_directory, archive_name)
 
         try:
             if archive_format == '7z':
@@ -642,33 +805,41 @@ class BackupManager:
                         'ru': 'Исполняемый файл 7z не найден, переключение на формат zip.', }
                     logging.warning(log_message.get(self._language, 'en'))
                     archive_format = 'zip'
-                    archive_name = f"{backup_file_name}.zip"
-                    archive_path = os_path.join(backup_directory, archive_name)
+                    archive_name = f"{file_name}.zip"
+                    archive_file_path = os_path.join(backup_directory, archive_name)
 
             log_message = {
                 'en': 'Creating archive: "{archive_path}" from file: "{file_path}".',
                 'ru': 'Создаем архив: "{archive_path}" из файла: "{file_path}".',
             }
-            logging.info(log_message.get(self._language, 'en').format(archive_path=archive_path, file_path=file_path))
-            
+            logging.info(log_message.get(self._language, 'en').format(
+                archive_path=archive_file_path, file_path=backup_file_path))
+
             if archive_format == 'zip':
-                await self._create_zip_archive(file_path, archive_path)
+                await self._create_zip_archive(backup_file_path, archive_file_path)
             elif archive_format == '7z':
-                await self._create_7z_archive(file_path, archive_path)
+                await self._create_7z_archive(backup_file_path, archive_file_path)
+
+            # Устанавливаем дату архива равной дате архивируемого файла
+            modification_time = self._file_times.get(backup_file_path.upper(), {}).get('modification_time', None)
+
+            # os_utime(archive_path, times=(modification_time, modification_time))
+            await self.set_file_times(backup_file_path, archive_file_path)
 
             log_message = {
                 'en': 'Backup completed for "{file_path}".',
                 'ru': 'Резервное копирование для "{file_path}" завершено.',
             }
-            logging.info(log_message.get(self._language, 'en').format(file_path=file_path))
+            logging.info(log_message.get(self._language, 'en').format(file_path=backup_file_path))
+
         except Exception as e:
             log_message = {
                 'en': 'Failed to backup "{file_path}": {error}.',
                 'ru': 'Не удалось создать резервную копию "{file_path}": {error}.',
             }
-            logging.error(log_message.get(self._language, 'en').format(file_path=file_path, error=e))
+            logging.error(log_message.get(self._language, 'en').format(file_path=backup_file_path, error=e))
 
-            await self._delete_oldest_backup(file_path)
+            await self._delete_oldest_backup(backup_file_path)
     
     async def _is_7z_available(self) -> bool:
         """
@@ -701,40 +872,43 @@ class BackupManager:
             logging.error(log_message.get(self._language, 'en').format(error=e))
             return False
     
-    async def _create_7z_archive(self, file_path: str, archive_path: str) -> None:
+    async def _create_7z_archive(self, backup_file_path: str, archive_path: str) -> None:
         """
-        Создает архив 7z с помощью 7z.exe.
+        Создает архив 7z с помощью утилиты 7z.exe.
 
-        Этот метод принимает путь к файлу и путь, где будет сохранен архив.
-        Использует команду 'a' для добавления файла в архив 7z.
+        Этот асинхронный метод вызывает внешнюю команду 7z для создания архива.
+        Использует команду 'a' для добавления указанного файла в архив в формате 7z.
 
-        :param file_path: Путь к файлу для архивирования.
-        :param archive_path: Путь для сохранения созданного архива.
-        :raises Exception: В случае ошибки при создании архива.
+        :param backup_file_path: Путь к файлу, который необходимо архивировать.
+        :param archive_path: Путь, по которому будет сохранен созданный архив.
+        :raises Exception: Если при создании архива возникает ошибка.
         """
         process = await create_subprocess_exec(
             f'{self._files_7z_path}',
-            'a', '-t7z', archive_path, file_path,
+            'a', '-t7z', archive_path, backup_file_path,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        await process.communicate()
-        # stdout, stderr = await process.communicate()
-        # logging.info(f'7z {stdout=}; 7z {stderr=}')
+        # await process.communicate()
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            logging.error(f'7z: {stdout=}; 7z: {stderr=}')
+            raise Exception(f'Ошибка при создании архива: {stderr.decode().strip()}')
 
     @staticmethod
-    async def _create_zip_archive(file_path: str, archive_path: str) -> None:
+    async def _create_zip_archive(backup_file_path: str, archive_path: str) -> None:
         """
         Создает архив zip с помощью ZipFile.
 
         Этот метод принимает путь к файлу и путь, где будет сохранен zip-архив.
         Использует библиотеку ZipFile для создания архива с заданным сжатием.
 
-        :param file_path: Путь к файлу для архивирования.
+        :param backup_file_path: Путь к файлу для архивирования.
         :param archive_path: Путь для сохранения созданного zip-архива.
         :raises Exception: В случае ошибки при создании zip-архива.
         """
         with ZipFile(archive_path, 'w', compression=ZIP_DEFLATED) as archive:
-            archive.write(file_path, os_path.basename(file_path))
+            archive.write(backup_file_path, os_path.basename(backup_file_path))
 
 
 
